@@ -128,5 +128,3 @@ class PlayerInterface(DogPlayerInterface):
         message = start_status.get_message()
         messagebox.showinfo(message=message)
 
-if __name__ == "__main__":
-    app = PlayerInterface()
