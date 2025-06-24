@@ -5,7 +5,7 @@ from piece import Piece
 MAX_NUMBER_OF_PIECES = 16
 
 class Player():
-    def __init__(self, id: int, name: str, is_black: bool, is_its_turn: bool, pieces: Optional[List[Piece]] = None):
+    def __init__(self, id: int, name: str, is_black: bool, is_its_turn: bool, pieces: Optional[List[Piece]] = None) -> None:
         self._id: int = id
         self._name:str = name
         self._is_black:bool = is_black
@@ -17,13 +17,15 @@ class Player():
             if not all(isinstance(p, Piece) for p in pieces):
                 raise TypeError("All Pieces must be instance of Piece.")
             self._pieces = pieces
-            
+
     @property
     def id(self) -> int:
         return self._id
 
     @id.setter
     def id(self, value: int):
+
+    def id(self, value: int) -> None:
         self._id = value
 
     @property
@@ -32,6 +34,8 @@ class Player():
 
     @name.setter
     def name(self, value: str):
+         
+    def name(self, value: str) -> None:
         self._name = value
 
     @property
@@ -40,15 +44,20 @@ class Player():
 
     @is_black.setter
     def is_black(self, value: bool):
-        self._is_black = value
+
+    def is_black(self, value: bool) -> None:
+     self._is_black = value
 
     @property
     def is_its_turn(self) -> bool:
         return self._is_its_turn
-
+    
     @is_its_turn.setter
     def is_its_turn(self, value: bool):
         self._is_its_turn = value
+
+    def toggle_turn(self) -> None:
+        self._is_its_turn = not self._is_its_turn
 
     @property
     def is_winner(self) -> bool:
@@ -56,6 +65,8 @@ class Player():
 
     @is_winner.setter
     def is_winner(self, value: bool):
+
+    def is_winner(self, value: bool) -> None:
         self._is_winner = value
 
     @property
@@ -64,6 +75,8 @@ class Player():
 
     @pieces.setter
     def pieces(self, new_pieces: List[Piece]):
+
+    def pieces(self, new_pieces: List[Piece]) -> None:
         if not all(isinstance(p, Piece) for p in new_pieces):
             raise TypeError("All pieces must be instances of Piece.")
         self._pieces = new_pieces

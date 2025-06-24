@@ -1,0 +1,2 @@
+class PieceNotLinkedToPositionError(Exception):
+    pass
