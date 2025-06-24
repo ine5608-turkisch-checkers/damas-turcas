@@ -17,5 +17,53 @@ class Player():
             if not all(isinstance(p, Piece) for p in pieces):
                 raise TypeError("All Pieces must be instance of Piece.")
             self._pieces = pieces
-        
-        ## Criar os métodos
+
+    @property
+    def id(self) -> int:
+        return self._id
+
+    @id.setter
+    def id(self, value: int) -> None:
+        self._id = value
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+
+    @property
+    def is_black(self) -> bool:
+        return self._is_black
+
+    @is_black.setter
+    def is_black(self, value: bool) -> None:
+        self._is_black = value
+
+    @property
+    def is_its_turn(self) -> bool:
+        return self._is_its_turn
+
+    @is_its_turn.setter
+    def is_its_turn(self, value: bool) -> None:
+        self._is_its_turn = value
+
+    @property
+    def is_winner(self) -> bool:
+        return self._is_winner
+
+    @is_winner.setter
+    def is_winner(self, value: bool) -> None:
+        self._is_winner = value
+
+    @property
+    def pieces(self) -> List[Piece]:
+        return self._pieces
+
+    @pieces.setter
+    def pieces(self, new_pieces: List[Piece]) -> None:
+        if not all(isinstance(p, Piece) for p in new_pieces):
+            raise TypeError("All pieces must be instances of Piece.")
+        self._pieces = new_pieces
