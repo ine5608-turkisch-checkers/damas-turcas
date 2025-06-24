@@ -5,7 +5,7 @@ from piece import Piece
 MAX_NUMBER_OF_PIECES = 16
 
 class Player():
-    def __init__(self, id: int, name: str, is_black: bool, is_its_turn: bool, pieces: Optional[List[Piece]] = None):
+    def __init__(self, id: int, name: str, is_black: bool, is_its_turn: bool, pieces: Optional[List[Piece]] = None) -> None:
         self._id: int = id
         self._name:str = name
         self._is_black:bool = is_black
@@ -46,9 +46,8 @@ class Player():
     def is_its_turn(self) -> bool:
         return self._is_its_turn
 
-    @is_its_turn.setter
-    def is_its_turn(self, value: bool) -> None:
-        self._is_its_turn = value
+    def toggle_turn(self) -> None:
+        self._is_its_turn = not self._is_its_turn
 
     @property
     def is_winner(self) -> bool:

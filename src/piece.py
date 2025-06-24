@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Optional, List
 from player import Player
 from position import Position
-from exceptions import PromotionError
+from exceptions import PromotionError, PieceNotLinkedToPositionError
 
 class Piece():
     def __init__(self, player: Optional[Player] = None, position: Optional[Position] = None):
@@ -13,7 +13,7 @@ class Piece():
     @property
     def player(self) -> Player:
         return self._player
-    
+
     @player.setter
     def player(self, player: Optional[Player]) -> None:
         if player is not None and not isinstance(player, Player):
@@ -23,7 +23,7 @@ class Piece():
     @property
     def position(self) -> Optional[Position]:
         return self._position
-    
+
     @position.setter
     def position(self, position: Optional[Position]) -> None:
         if position is not None and not isinstance(position, Position):
@@ -33,9 +33,18 @@ class Piece():
     @property
     def is_king(self) -> bool:
         return self._is_king
+    
+    def detach_piece(self) -> None:
+        ...
 
     def promote_piece(self) -> None:
-        if not self._is_king:
-            self._is_king = True
-        else:
+        if self._is_king:
             raise PromotionError("Error: Piece is already a king.")
+        else:
+            self._is_king = True
+
+    def get_coordinate(self) -> List[int]:
+        """Retorna coordenadas da posição em formato de lista"""
+        if self._position is None:
+            raise PieceNotLinkedToPositionError("Error: Piece is not linked to position.")
+        return self._position.get_coordinate
