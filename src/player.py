@@ -74,3 +74,25 @@ class Player():
         if not all(isinstance(p, Piece) for p in new_pieces):
             raise TypeError("All pieces must be instances of Piece.")
         self._pieces = new_pieces
+
+#ver se vamos fazer dessa forma mesmo, com esse diagrama esta completo
+
+    def initialize(self, name: str, id: int) -> None:
+        self.name = name
+        self.id = id
+        self.is_black = (id == 2)
+        self.is_its_turn = (id == 1)
+        self.is_winner = False
+        self._pieces = []
+
+    def getPieces(self) -> List[Piece]:
+        return self.pieces
+
+    def get_turn(self) -> bool:
+        return self.is_its_turn
+
+    def toggle_turn(self, turn: bool) -> None:
+        self.is_its_turn = turn
+
+    def get_winner(self) -> bool:
+        return self.is_winner
