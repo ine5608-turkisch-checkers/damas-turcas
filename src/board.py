@@ -1,5 +1,4 @@
 from typing import Optional, List
-
 from player import Player
 from game_status import GameStatus
 from position import Position
@@ -80,3 +79,88 @@ class Board():
         if received_move is not None and not isinstance(received_move, dict):
             raise TypeError("Received move must be a dictionary or None")
         self._received_move = received_move
+
+ def initialize_board(self) -> None:
+        """Posiciona as 16 peças iniciais de cada jogador no tabuleiro"""
+        for row in range(BOARD_SIZE):
+            for col in range(BOARD_SIZE):
+                pos = self._positions[row][col]
+                if row < 2:
+                    piece = Piece(is_black=True)
+                    pos.piece = piece
+                    self._player2.pieces.append(piece)
+                elif row >= BOARD_SIZE - 2:
+                    piece = Piece(is_black=False)
+                    pos.piece = piece
+                    self._player1.pieces.append(piece)
+
+    def get_piece(self, pos: Position) -> Optional[Piece]:
+        return self._positions[pos.row][pos.col].piece
+
+    def remove_piece(self, pos: Position) -> None:
+        self._positions[pos.row][pos.col].detach_piece()
+
+    def move_piece(self, origin: Position, destination: Position) -> None:
+        piece = self.get_piece(origin)
+        if piece is None:
+            raise ValueError("Sem peça na origem.")
+
+        self.remove_piece(origin)
+        self._positions[destination.row][destination.col].piece = piece
+        self.promote_if_necessary(destination)
+        self.check_game_over()
+
+    def promote_if_necessary(self, pos: Position) -> None:
+        piece = pos.piece
+        if piece and not piece.is_king:
+            if (piece.is_black and pos.row == 0) or (not piece.is_black and pos.row == BOARD_SIZE - 1):
+                piece.is_king = True
+
+
+    def is_valid_move(self, origin: Position, destination: Position) -> bool:
+        piece = self.get_piece(origin)
+        if piece is None or destination.is_occupied:
+            return False
+
+        row_diff = destination.row - origin.row
+        col_diff = destination.col - origin.col
+
+        if abs(row_diff) != 1 or abs(col_diff) != 1:
+            return False
+
+        if not piece.is_king:
+            if piece.is_black and row_diff != -1:
+                return False
+            if not piece.is_black and row_diff != 1:
+                return False
+
+        return True
+
+    def get_possible_moves(self, pos: Position) -> List[Position]:
+        moves = []
+        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+        for dr, dc in directions:
+            r, c = pos.row + dr, pos.col + dc
+            if 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE:
+                dest = self._positions[r][c]
+                if not dest.is_occupied and self.is_valid_move(pos, dest):
+                    moves.append(dest)
+        return moves
+
+    def check_game_over(self) -> None:
+        alive1 = any(p.is_alive for p in self._player1.pieces)
+        alive2 = any(p.is_alive for p in self._player2.pieces)
+
+        if not alive1:
+            self._winner = self._player2
+            self._game_status = GameStatus.FINISHED.value
+        elif not alive2:
+            self._winner = self._player1
+            self._game_status = GameStatus.FINISHED.value
+
+
+# - Inicialização do tabuleiro e posicionamento das peças
+# - Movimentação, promoção a dama e remoção de peças
+# - Validação de jogadas conforme regras do jogo
+# - Detecção do fim de jogo e definição do vencedor
+# Interage diretamente com Player, Position, Piece e GameStatus.
