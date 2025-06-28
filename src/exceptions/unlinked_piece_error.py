@@ -1,0 +1,2 @@
+class UnlinkedPieceError(Exception):
+    pass
