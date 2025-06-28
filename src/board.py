@@ -1,43 +1,42 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 from player import Player
 from game_status import GameStatus
 from position import Position
+from piece import Piece
 
 BOARD_SIZE = 8
 
 class Board():
-    def __init__(self, player1: Player, player2: Player):
+    def __init__(self):
+        """Inicializa o board. Instancia os players. Que por sua vez instancia as peças.
+        Depois instancia as posições e associa as peças dos players as posições."""
+
+        self._player1: Player = Player() # Precisamos definir os argumentos
+        self._player2: Player = Player() # Precisamos definir os argumentos
         self._positions: List[List[Position]] = [
             [Position(row,col) for col in range(BOARD_SIZE)]
             for row in range(BOARD_SIZE)
         ]
-        self._player1: Player = player1
-        self._player2: Player = player2
+
         self._game_status: int = GameStatus.NO_MATCH.value
         self._winner: Optional[Player] = None
 
         self._selected_position: Optional[Position] = None
         self._received_move: Optional[dict] = None
 
+        self.place_pieces_on_board()
+
     @property
     def player1(self) -> Player:
         return self._player1
-
-    @player1.setter
-    def player1(self, player1: Player) -> None:
-        if not isinstance(player1, Player):
-            raise TypeError("Player 1 must be a Player")
-        self._player1 = player1
 
     @property
     def player2(self) -> Player:
         return self._player2
     
-    @player2.setter
-    def player2(self, player2: Player) -> None:
-        if not isinstance(player2, Player):
-            raise TypeError("Player 2 must be a Player")
-        self._player2 = player2
+    @property
+    def positions(self) -> List[List[Position]]:
+        return self._positions
 
     @property
     def game_status(self) -> int:
@@ -80,45 +79,92 @@ class Board():
             raise TypeError("Received move must be a dictionary or None")
         self._received_move = received_move
 
- def initialize_board(self) -> None:
-        """Posiciona as 16 peças iniciais de cada jogador no tabuleiro"""
-        for row in range(BOARD_SIZE):
-            for col in range(BOARD_SIZE):
-                pos = self._positions[row][col]
-                if row < 2:
-                    piece = Piece(is_black=True)
-                    pos.piece = piece
-                    self._player2.pieces.append(piece)
-                elif row >= BOARD_SIZE - 2:
-                    piece = Piece(is_black=False)
-                    pos.piece = piece
-                    self._player1.pieces.append(piece)
+    def player_pieces(self, player: Player) -> List[Piece]:
+        """Retorna uma lista de peças de um dado jogador"""
 
-    def get_piece(self, pos: Position) -> Optional[Piece]:
+        if player == self.player1:
+            return self.player1.pieces
+        elif player == self.player2:
+            return self.player2.pieces
+        else:
+            raise TypeError("player is not Player 1 or Player 2")
+
+    def get_all_pieces(self) -> Dict[str, List[Piece]]:
+        """Retorna um dicionário com todas as peças
+        
+        - 'player1': lista de peças do jogador 1
+        - 'player2': lista de peças do jogador 2"""
+
+        return {
+            'player1': self.player_pieces(self.player1),
+            'player2': self.player_pieces(self.player2),
+        }
+    
+    def piece_at(self, pos: Position) -> Optional[Piece]:
+        """Retorna peça associada à uma dada posição"""
+
         return self._positions[pos.row][pos.col].piece
 
-    def remove_piece(self, pos: Position) -> None:
+    def place_pieces_on_board(self) -> None:
+        """Posiciona as 16 peças iniciais de cada jogador no tabuleiro."""
+
+        # Player 1 – linhas 5 e 6 (de baixo para cima)
+        pieces_p1 = self.player_pieces(self.player1)
+        for row in [5, 6]:
+            for col in range(BOARD_SIZE):
+                try:
+                    piece = pieces_p1.pop(0) #Retira a primeira peça da lista
+                    position = self._positions[row][col]
+                    piece.position = position
+                    position.piece = piece
+                except IndexError:
+                    break
+
+        # Player 2 – linhas 1 e 2 (de cima para baixo)
+        pieces_p2 = self.player_pieces(self.player2)
+        for row in [1, 2]:
+            for col in range(BOARD_SIZE):
+                try:
+                    piece = pieces_p2.pop(0) #Retira a primeira peça da lista
+                    position = self._positions[row][col]
+                    piece.position = position
+                    position.piece = piece
+                except IndexError:
+                    break
+
+    def detach_piece_at(self, pos: Position) -> None:
+        """Desassocia a peça de uma dada posição"""
+
         self._positions[pos.row][pos.col].detach_piece()
 
     def move_piece(self, origin: Position, destination: Position) -> None:
-        piece = self.get_piece(origin)
+        """Move peça de uma posição de origem à uma posição de destino.
+        Promove se necessário e checa condição de término de jogo"""
+
+        piece = self.piece_at(origin)
         if piece is None:
             raise ValueError("Sem peça na origem.")
 
-        self.remove_piece(origin)
-        self._positions[destination.row][destination.col].piece = piece
-        self.promote_if_necessary(destination)
-        self.check_game_over()
+        origin.detach_piece()
+        destination.piece = piece 
+        self._maybe_promote(destination)
+        self._evaluate_end_condition()
 
-    def promote_if_necessary(self, pos: Position) -> None:
+    # Felipe: Não acho que esse método esteja correto.
+    # A verificação não deveria ser local apenas?
+    def _maybe_promote(self, pos: Position) -> None:
+
         piece = pos.piece
         if piece and not piece.is_king:
             if (piece.is_black and pos.row == 0) or (not piece.is_black and pos.row == BOARD_SIZE - 1):
                 piece.is_king = True
 
 
+    # Felipe: Não acho que esse método esteja correto.
+    # A verificação do movimento é sempre de si mesmo e cada jogador tem a impressão
+    # que está jogando do "sul" do tabuleiro
     def is_valid_move(self, origin: Position, destination: Position) -> bool:
-        piece = self.get_piece(origin)
+        piece = self.piece_at(origin)
         if piece is None or destination.is_occupied:
             return False
 
@@ -147,9 +193,13 @@ class Board():
                     moves.append(dest)
         return moves
 
-    def check_game_over(self) -> None:
-        alive1 = any(p.is_alive for p in self._player1.pieces)
-        alive2 = any(p.is_alive for p in self._player2.pieces)
+    # Felipe: Check winning condition apenas abrange vitória por inexistência de peças
+    # não capturadas por parte de um dos jogadores
+    def _evaluate_end_condition(self) -> None:
+        """Checa condições de vitória do jogo"""
+
+        alive1 = any(not p.is_captured for p in self.player_pieces(self.player1))
+        alive2 = any(not p.is_captured for p in self.player_pieces(self.player2))
 
         if not alive1:
             self._winner = self._player2
@@ -157,10 +207,3 @@ class Board():
         elif not alive2:
             self._winner = self._player1
             self._game_status = GameStatus.FINISHED.value
-
-
-# - Inicialização do tabuleiro e posicionamento das peças
-# - Movimentação, promoção a dama e remoção de peças
-# - Validação de jogadas conforme regras do jogo
-# - Detecção do fim de jogo e definição do vencedor
-# Interage diretamente com Player, Position, Piece e GameStatus.

@@ -1,2 +1,3 @@
 from .promotion_error import PromotionError
-from .piece_not_linked_to_position import PieceNotLinkedToPositionError
+from .unlinked_piece_error import UnlinkedPieceError
+from .capture_error import CaptureError
