@@ -5,19 +5,40 @@ from position import Position
 
 BOARD_SIZE = 8
 
-class Board():
-    def __init__(self, player1: Player, player2: Player):
+class Board:
+    def __init__(self):#
+        self._player1 = Player()
+        self._player2 = Player()
         self._positions: List[List[Position]] = [
-            [Position(row,col) for col in range(BOARD_SIZE)]
+            [Position(row, col) for col in range(BOARD_SIZE)]
             for row in range(BOARD_SIZE)
-        ]
-        self._player1: Player = player1
-        self._player2: Player = player2
+        ] # pode ser usado com o self._positions[2][3] ex
         self._game_status: int = GameStatus.NO_MATCH.value
         self._winner: Optional[Player] = None
-
         self._selected_position: Optional[Position] = None
         self._received_move: Optional[dict] = None
+        self.place_pieces_on_board()
+
+    def place_pieces_on_board(self):
+        num_piece = 0
+        for k in range(0, 2):  # Linhas 0 e 1
+            for i in range(0, 8):  # Colunas 0 a 7
+                position = self._positions[k][i]
+                self._player1.associate_piece_position(position, num_piece)
+                num_piece += 1
+
+        num_piece = 0
+        for k in range(6, 8):  # Linhas 6 e 7
+            for i in range(0, 8):  # Colunas 0 a 7
+                position = self._positions[k][i]
+                self._player2.associate_piece_position(position, num_piece)
+                num_piece += 1
+
+    def get_all_pieces(self):
+        all_pieces = []
+        all_pieces.append(self.player1.pieces)
+        all_pieces.append(self.player2.pieces)
+        return  all_pieces
 
     @property
     def player1(self) -> Player:
@@ -80,21 +101,7 @@ class Board():
             raise TypeError("Received move must be a dictionary or None")
         self._received_move = received_move
 
- def initialize_board(self) -> None:
-        """Posiciona as 16 peças iniciais de cada jogador no tabuleiro"""
-        for row in range(BOARD_SIZE):
-            for col in range(BOARD_SIZE):
-                pos = self._positions[row][col]
-                if row < 2:
-                    piece = Piece(is_black=True)
-                    pos.piece = piece
-                    self._player2.pieces.append(piece)
-                elif row >= BOARD_SIZE - 2:
-                    piece = Piece(is_black=False)
-                    pos.piece = piece
-                    self._player1.pieces.append(piece)
-
-    def get_piece(self, pos: Position) -> Optional[Piece]:
+    def get_piece(self, pos: Position):
         return self._positions[pos.row][pos.col].piece
 
     def remove_piece(self, pos: Position) -> None:
@@ -158,6 +165,20 @@ class Board():
             self._winner = self._player1
             self._game_status = GameStatus.FINISHED.value
 
+"""    def initialize_board(self):
+        #Posiciona as 16 peças iniciais de cada jogador no tabuleiro
+        for row in range(BOARD_SIZE):
+            for col in range(BOARD_SIZE):
+                pos = self._positions[row][col]
+                if row < 2:
+                    piece = Piece(is_black=True)
+                    pos.piece = piece
+                    self._player2.pieces.append(piece)
+                elif row >= BOARD_SIZE - 2:
+                    piece = Piece(is_black=False)
+                    pos.piece = piece
+                    self._player1.pieces.append(piece)
+"""
 
 # - Inicialização do tabuleiro e posicionamento das peças
 # - Movimentação, promoção a dama e remoção de peças

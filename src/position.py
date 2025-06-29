@@ -1,13 +1,20 @@
 from typing import Optional, List
-from piece import Piece
+from typing import TYPE_CHECKING
 
-class Position():
+if TYPE_CHECKING:
+    from piece import Piece
+
+class Position:
     def __init__(self, row: int, col: int) -> None:
         if not isinstance(row, int) or not isinstance(col, int):
                 raise TypeError(f"Row and column must be integer. Instead, row is {type(row)} and column is {type(col)}")
         self._row: int = row
         self._col: int = col
-        self._piece: Optional[Piece] = None
+        self._piece = None
+
+    def associate_piece(self, piece):
+        self._piece = piece
+        return True
 
     @property
     def row(self) -> int:
@@ -30,11 +37,11 @@ class Position():
         self._col = col
 
     @property
-    def piece(self) -> Optional[Piece]:
+    def piece(self):
         return self._piece
 
     @piece.setter
-    def piece(self, piece: Optional[Piece]) -> None:
+    def piece(self, piece):
         if piece is not None and not isinstance(piece, Piece):
             raise TypeError(f"piece should be instance of Piece. Instead, piece is: {type(piece)}")
         self._piece = piece

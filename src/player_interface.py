@@ -1,8 +1,11 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import simpledialog
+from tkinter.messagebox import showinfo
+
 from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
+from board import Board
 
 BOARD_SIZE = 8
 TILE_SIZE = 80
@@ -13,16 +16,19 @@ class PlayerInterface(DogPlayerInterface):
     def __init__(self):
         self.main_window = tk.Tk()  # Instancia a janela principal
         self.fill_main_window()  # Organiza a janela e cria os widgets
-        self.board = None  # Inicie seu objeto Board aqui, se necessário
+        self.board = Board()
         self.message_notification = None  # Variável para a mensagem de notificação
         self.draw_board()  # Desenha o tabuleiro inicial
-
+        self.associate_canva()
         player_name = simpledialog.askstring(title="Player identification", prompt="Qual o seu nome?")
         self.dog_server_interface = DogActor()
         message = self.dog_server_interface.initialize(player_name, self)
         messagebox.showinfo(message=message)
-
         self.main_window.mainloop()  # Mantém a janela aberta
+
+    def associate_canva(self):
+        all_pieces = self.board.get_all_pieces()
+        #tem que fazer o restante da associação do próprio canva
 
     def fill_main_window(self):
         # Configuração do título, tamanho e fundo da janela
@@ -84,6 +90,7 @@ class PlayerInterface(DogPlayerInterface):
         # Adicionar itens de menu a cada menu adicionado à barra de menu:
         self.menu_file.add_command(label="Iniciar jogo", command=self.start_match)
         #self.menu_file.add_command(label="Restaurar estado inicial", command=self.start_game)
+
 
     def draw_board(self):
         self.canvas.delete("all")

@@ -1,31 +1,27 @@
 from typing import Optional, List
-from player import Player
-from position import Position
 from exceptions import PromotionError, PieceNotLinkedToPositionError
+from typing import TYPE_CHECKING
 
-class Piece():
-    def __init__(self, player: Optional[Player] = None, position: Optional[Position] = None):
-        self._player: Optional[Player] = player
-        self._position: Optional[Position] = position
+if TYPE_CHECKING:
+    from position import Position
+
+class Piece:
+    def __init__(self):
+        self._position = None
         self._is_king: bool = False 
         self._captured: bool = False
 
-    @property
-    def player(self) -> Player:
-        return self._player
-
-    @player.setter
-    def player(self, player: Optional[Player]) -> None:
-        if player is not None and not isinstance(player, Player):
-            raise TypeError(f"Player should be instance of Player. Instead, player is: {type(player)}")
-        self._player = player
+    def associate_position(self, position):
+        self._position = position
+        retorno = position.associate_piece(self)
+        return retorno
 
     @property
-    def position(self) -> Optional[Position]:
+    def position(self):
         return self._position
 
     @position.setter
-    def position(self, position: Optional[Position]) -> None:
+    def position(self, position):
         if position is not None and not isinstance(position, Position):
             raise TypeError(f"Position should be instance of Position. Instead, position is: {type(position)}")
         self._position = position
