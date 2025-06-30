@@ -16,12 +16,19 @@ class Piece():
     def player(self) -> Player:
         return self._player
 
+    # Provavelmente isto está errado
+    def associate_position(self, position):
+        self._position = position
+        retorno = position.associate_piece(self)
+        return retorno
+
+
     @property
-    def position(self) -> Optional[Position]:
+    def position(self):
         return self._position
 
     @position.setter
-    def position(self, position: Optional[Position]) -> None:
+    def position(self, position):
         if position is not None and not isinstance(position, Position):
             raise TypeError(f"Position should be instance of Position. Instead, position is: {type(position)}")
         self._position = position

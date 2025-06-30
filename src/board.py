@@ -14,15 +14,36 @@ class Board():
         self._player1: Player = Player() # Precisamos definir os argumentos
         self._player2: Player = Player() # Precisamos definir os argumentos
         self._positions: List[List[Position]] = [
-            [Position(row,col) for col in range(BOARD_SIZE)]
+            [Position(row, col) for col in range(BOARD_SIZE)]
             for row in range(BOARD_SIZE)
-        ]
+        ] # pode ser usado com o self._positions[2][3] ex
 
         self._game_status: int = GameStatus.NO_MATCH.value
         self._winner: Optional[Player] = None
-
         self._selected_position: Optional[Position] = None
         self._received_move: Optional[dict] = None
+        self.place_pieces_on_board()
+
+    def place_pieces_on_board(self):
+        num_piece = 0
+        for k in range(0, 2):  # Linhas 0 e 1
+            for i in range(0, 8):  # Colunas 0 a 7
+                position = self._positions[k][i]
+                self._player1.associate_piece_position(position, num_piece)
+                num_piece += 1
+
+        num_piece = 0
+        for k in range(6, 8):  # Linhas 6 e 7
+            for i in range(0, 8):  # Colunas 0 a 7
+                position = self._positions[k][i]
+                self._player2.associate_piece_position(position, num_piece)
+                num_piece += 1
+
+    def get_all_pieces(self):
+        all_pieces = []
+        all_pieces.append(self.player1.pieces)
+        all_pieces.append(self.player2.pieces)
+        return  all_pieces
 
         self.place_pieces_on_board()
 
@@ -102,7 +123,7 @@ class Board():
     
     def piece_at(self, pos: Position) -> Optional[Piece]:
         """Retorna peça associada à uma dada posição"""
-
+        
         return self._positions[pos.row][pos.col].piece
 
     def place_pieces_on_board(self) -> None:
@@ -207,3 +228,4 @@ class Board():
         elif not alive2:
             self._winner = self._player1
             self._game_status = GameStatus.FINISHED.value
+
