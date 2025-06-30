@@ -120,10 +120,10 @@ class PlayerInterface(DogPlayerInterface):
         messagebox.showinfo("Reset", "Board has been reset.")
 
     def start_game(self):
-        match_status = self.board.get_match_status()
+        match_status = self.board.game_status()
         if match_status == 2 or match_status == 6:
             self.board.reset_game()
-            game_state = self.board.get_status()
+            game_state = self.board.game_status()
             self.update_gui(game_state)
 
     def start_match(self):

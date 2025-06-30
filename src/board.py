@@ -4,6 +4,8 @@ from game_status import GameStatus
 from position import Position
 from piece import Piece
 
+import json
+
 BOARD_SIZE = 8
 
 class Board():
@@ -11,8 +13,6 @@ class Board():
         """Inicializa o board. Instancia os players. Que por sua vez instancia as peças.
         Depois instancia as posições e associa as peças dos players as posições."""
 
-        self._player1: Player = Player() # Precisamos definir os argumentos
-        self._player2: Player = Player() # Precisamos definir os argumentos
         self._positions: List[List[Position]] = [
             [Position(row, col) for col in range(BOARD_SIZE)]
             for row in range(BOARD_SIZE)
@@ -202,3 +202,39 @@ class Board():
             self._winner = self._player1
             self._game_status = GameStatus.FINISHED.value
 
+    def start_match(self, players: str, local_player_id: str) -> bool:
+        """
+        Atualiza os atributos dos jogadores existentes com os dados da Dog API.
+        Define quem começa e retorna True se for o jogador local, False caso contrário.
+        """
+
+        try:
+            player_data = json.loads(players)  # lista de dicionários com id e name
+        except json.JSONDecodeError:
+            raise ValueError("Invalid format of string players.")
+
+        if not isinstance(player_data, list) or len(player_data) != 2:
+            raise ValueError("Player list should have exactly 2 players.")
+
+        # Define quem é o jogador local e consequentemente o primeiro a jogar
+        if player_data[0]["id"] == local_player_id:
+            local = player_data[0]
+            remote = player_data[1]
+            my_turn = True
+        else:
+            local = player_data[1]
+            remote = player_data[0]
+            my_turn = False
+
+        # Atualiza player1 e player2 (que já existem)
+        self.player1.id = int(local["id"])
+        self.player1.name = local["name"]
+        self.player1.is_black = my_turn
+        self.player1.is_its_turn = my_turn
+
+        self.player2.id = int(remote["id"])
+        self.player2.name = remote["name"]
+        self.player2.is_black = not my_turn
+        self.player2.is_its_turn = not my_turn
+
+        return my_turn
