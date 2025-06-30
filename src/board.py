@@ -24,29 +24,6 @@ class Board():
         self._received_move: Optional[dict] = None
         self.place_pieces_on_board()
 
-    def place_pieces_on_board(self):
-        num_piece = 0
-        for k in range(0, 2):  # Linhas 0 e 1
-            for i in range(0, 8):  # Colunas 0 a 7
-                position = self._positions[k][i]
-                self._player1.associate_piece_position(position, num_piece)
-                num_piece += 1
-
-        num_piece = 0
-        for k in range(6, 8):  # Linhas 6 e 7
-            for i in range(0, 8):  # Colunas 0 a 7
-                position = self._positions[k][i]
-                self._player2.associate_piece_position(position, num_piece)
-                num_piece += 1
-
-    def get_all_pieces(self):
-        all_pieces = []
-        all_pieces.append(self.player1.pieces)
-        all_pieces.append(self.player2.pieces)
-        return  all_pieces
-
-        self.place_pieces_on_board()
-
     @property
     def player1(self) -> Player:
         return self._player1
@@ -133,25 +110,21 @@ class Board():
         pieces_p1 = self.player_pieces(self.player1)
         for row in [5, 6]:
             for col in range(BOARD_SIZE):
-                try:
-                    piece = pieces_p1.pop(0) #Retira a primeira peça da lista
-                    position = self._positions[row][col]
-                    piece.position = position
-                    position.piece = piece
-                except IndexError:
+                if not pieces_p1:
                     break
+                piece = pieces_p1.pop(0)
+                position = self._positions[row][col]
+                self._player1.associate_piece_position(piece, position)
 
         # Player 2 – linhas 1 e 2 (de cima para baixo)
         pieces_p2 = self.player_pieces(self.player2)
         for row in [1, 2]:
             for col in range(BOARD_SIZE):
-                try:
-                    piece = pieces_p2.pop(0) #Retira a primeira peça da lista
-                    position = self._positions[row][col]
-                    piece.position = position
-                    position.piece = piece
-                except IndexError:
+                if not pieces_p2:
                     break
+                piece = pieces_p2.pop(0)
+                position = self._positions[row][col]
+                self._player2.associate_piece_position(piece, position)
 
     def detach_piece_at(self, pos: Position) -> None:
         """Desassocia a peça de uma dada posição"""

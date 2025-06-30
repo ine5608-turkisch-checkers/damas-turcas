@@ -16,22 +16,23 @@ class Piece():
     def player(self) -> Player:
         return self._player
 
-    # Provavelmente isto está errado
-    def associate_position(self, position):
-        self._position = position
-        retorno = position.associate_piece(self)
-        return retorno
-
-
     @property
-    def position(self):
+    def position(self) -> Optional[Position]:
         return self._position
 
     @position.setter
-    def position(self, position):
+    def position(self, position: Optional[Position]) -> None:
         if position is not None and not isinstance(position, Position):
-            raise TypeError(f"Position should be instance of Position. Instead, position is: {type(position)}")
+            raise TypeError("Position must be a Position instance")
+        
+        # Desvincula da posição anterior
+        if self._position is not None and self._position.piece is self:
+            self._position._piece = None
+
         self._position = position
+
+        if position is not None and position.piece is not self:
+            position.piece = self
     
     def detach_position(self) -> None:
         """Desvincula peça da posição"""

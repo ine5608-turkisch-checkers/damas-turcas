@@ -1,6 +1,6 @@
 from typing import Optional, List
-
 from piece import Piece
+from position import Position
 
 MAX_NUMBER_OF_PIECES = 16
 
@@ -13,11 +13,6 @@ class Player():
         self._is_its_turn: bool = is_its_turn
         self._is_winner: bool = False
         self._pieces: List[Piece] = [Piece(self) for _ in range(MAX_NUMBER_OF_PIECES)] #Diagrama de sequência Initialize: Player instancia as suas peças sem posição 
-    
-    # Provavelmente isto está errado
-    def associate_piece_position(self, position, num_piece):
-        piece = self._pieces[num_piece]
-        piece.associate_position(position)
 
     @property
     def id(self) -> int:
@@ -65,3 +60,9 @@ class Player():
     @property
     def pieces(self) -> List[Piece]:
         return self._pieces
+
+    def associate_piece_position(self, piece: Piece, position: Position) -> None:
+        """Associa uma peça deste jogador a uma posição."""
+        if piece not in self._pieces:
+            raise ValueError("Essa peça não pertence ao jogador.")
+        piece.position = position

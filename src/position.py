@@ -1,8 +1,5 @@
 from typing import Optional, List
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from piece import Piece
+from piece import Piece
 
 class Position:
     def __init__(self, row: int, col: int) -> None:
@@ -10,11 +7,7 @@ class Position:
                 raise TypeError(f"Row and column must be integer. Instead, row is {type(row)} and column is {type(col)}")
         self._row: int = row
         self._col: int = col
-        self._piece = None
-
-    def associate_piece(self, piece):
-        self._piece = piece
-        return True
+        self._piece: Optional[Piece] = None
 
     @property
     def row(self) -> int:
@@ -47,14 +40,10 @@ class Position:
         return self._piece
 
     @piece.setter
-    def piece(self, piece):
+    def piece(self, piece: Optional[Piece]) -> None:
         if piece is not None and not isinstance(piece, Piece):
-            raise TypeError(f"piece should be instance of Piece. Instead, piece is: {type(piece)}")
-
+            raise TypeError("piece must be a Piece instance")
         self._piece = piece
-
-        if piece is not None:
-            piece.position = self #Associação bidirecional piece <-> position
 
     @property
     def is_occupied(self) -> bool:
@@ -68,7 +57,8 @@ class Position:
 
         return self.piece.is_king if self.is_occupied else False
 
-    def detach_piece(self)-> None:
+    def detach_piece(self) -> None:
         """Desvincula posição da peça"""
 
-        self.piece.detach_position()
+        if self._piece is not None:
+            self._piece.detach_position()
