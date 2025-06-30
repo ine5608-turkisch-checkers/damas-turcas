@@ -1,27 +1,22 @@
 from typing import Optional, List
-from player import Player
-from position import Position
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from position import Position
 from exceptions import PromotionError, UnlinkedPieceError, CaptureError
 
-class Piece():
-    def __init__(self, player: Player, position: Optional[Position] = None):
+class Piece:
+    def __init__(self):
         """Inicializa a classe piece a partir do player. Inicialmente não é associado a uma posição"""
-
-        self._player: Player = player
-        self._position: Optional[Position] = position
+        self._position = None
         self._is_king: bool = False
         self._is_captured: bool = False
 
     @property
-    def player(self) -> Player:
-        return self._player
-
-    @property
-    def position(self) -> Optional[Position]:
+    def position(self):
         return self._position
 
     @position.setter
-    def position(self, position: Optional[Position]) -> None:
+    def position(self, position):
         if position is not None and not isinstance(position, Position):
             raise TypeError("Position must be a Position instance")
         
@@ -72,3 +67,8 @@ class Piece():
         if self._position is None:
             raise UnlinkedPieceError("Error: Piece is not linked to position.")
         return self._position.coordinates
+
+    def associate_position(self, position):
+        self._position = position
+        retorno = position.associate_piece(self)
+        return retorno

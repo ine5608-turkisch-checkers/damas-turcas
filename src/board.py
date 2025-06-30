@@ -8,11 +8,12 @@ import json
 
 BOARD_SIZE = 8
 
-class Board():
+class Board:
     def __init__(self):
         """Inicializa o board. Instancia os players. Que por sua vez instancia as peças.
         Depois instancia as posições e associa as peças dos players as posições."""
-
+        self._player1 = Player()
+        self._player2 = Player()
         self._positions: List[List[Position]] = [
             [Position(row, col) for col in range(BOARD_SIZE)]
             for row in range(BOARD_SIZE)
@@ -103,28 +104,20 @@ class Board():
         
         return self._positions[pos.row][pos.col].piece
 
-    def place_pieces_on_board(self) -> None:
-        """Posiciona as 16 peças iniciais de cada jogador no tabuleiro."""
+    def place_pieces_on_board(self):
+        num_piece = 0
+        for k in range(0, 2):  # Linhas 0 e 1
+            for i in range(0, 8):  # Colunas 0 a 7
+                position = self._positions[k][i]
+                self._player1.associate_piece_position(position, num_piece)
+                num_piece += 1
 
-        # Player 1 – linhas 5 e 6 (de baixo para cima)
-        pieces_p1 = self.player_pieces(self.player1)
-        for row in [5, 6]:
-            for col in range(BOARD_SIZE):
-                if not pieces_p1:
-                    break
-                piece = pieces_p1.pop(0)
-                position = self._positions[row][col]
-                self._player1.associate_piece_position(piece, position)
-
-        # Player 2 – linhas 1 e 2 (de cima para baixo)
-        pieces_p2 = self.player_pieces(self.player2)
-        for row in [1, 2]:
-            for col in range(BOARD_SIZE):
-                if not pieces_p2:
-                    break
-                piece = pieces_p2.pop(0)
-                position = self._positions[row][col]
-                self._player2.associate_piece_position(piece, position)
+        num_piece = 0
+        for k in range(6, 8):  # Linhas 6 e 7
+            for i in range(0, 8):  # Colunas 0 a 7
+                position = self._positions[k][i]
+                self._player2.associate_piece_position(position, num_piece)
+                num_piece += 1
 
     def detach_piece_at(self, pos: Position) -> None:
         """Desassocia a peça de uma dada posição"""

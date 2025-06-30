@@ -1,5 +1,8 @@
 from typing import Optional, List
-from piece import Piece
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from piece import Piece
+
 
 class Position:
     def __init__(self, row: int, col: int) -> None:
@@ -36,11 +39,11 @@ class Position:
         return [self.row, self.col]
 
     @property
-    def piece(self) -> Optional[Piece]:
+    def piece(self):
         return self._piece
 
     @piece.setter
-    def piece(self, piece: Optional[Piece]) -> None:
+    def piece(self, piece):
         if piece is not None and not isinstance(piece, Piece):
             raise TypeError("piece must be a Piece instance")
         self._piece = piece
@@ -62,3 +65,7 @@ class Position:
 
         if self._piece is not None:
             self._piece.detach_position()
+
+    def associate_piece(self, piece):
+        self._piece = piece
+        return True
