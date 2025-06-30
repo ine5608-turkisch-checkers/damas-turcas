@@ -4,15 +4,17 @@ from piece import Piece
 
 MAX_NUMBER_OF_PIECES = 16
 
-class Player:
-    def __init__(self):
-        self._id = 0
-        self._name = ""
-        self._is_black = False
-        self._is_its_turn = False
-        self._is_winner = False
-        self._pieces = [Piece() for i in range(16)] #create_piece()
 
+class Player():
+    def __init__(self, id: int = 0, name: str = "", is_black: bool = False, is_its_turn: bool = False) -> None:
+        self._id: int = id
+        self._name:str = name
+        self._is_black:bool = is_black
+        self._is_its_turn: bool = is_its_turn
+        self._is_winner: bool = False
+        self._pieces: List[Piece] = [Piece(self) for _ in range(MAX_NUMBER_OF_PIECES)] #Diagrama de sequência Initialize: Player instancia as suas peças sem posição 
+    
+    # Provavelmente isto está errado
     def associate_piece_position(self, position, num_piece):
         piece = self._pieces[num_piece]
         piece.associate_position(position)
@@ -22,16 +24,16 @@ class Player:
         return self._id
 
     @id.setter
-    def id(self, value: int) -> None:
-        self._id = value
+    def id(self, id: int) -> None:
+        self._id = id
 
     @property
     def name(self) -> str:
         return self._name
 
     @name.setter
-    def name(self, value: str) -> None:
-        self._name = value
+    def name(self, name: str) -> None:
+        self._name = name
 
     @property
     def is_black(self) -> bool:
@@ -63,11 +65,3 @@ class Player:
     @property
     def pieces(self) -> List[Piece]:
         return self._pieces
-
-    @pieces.setter
-    def pieces(self, new_pieces: List[Piece]) -> None:
-        if len(new_pieces) != MAX_NUMBER_OF_PIECES:
-            raise ValueError(f"Player must start with exactly {MAX_NUMBER_OF_PIECES} pieces.")
-        if not all(isinstance(p, Piece) for p in new_pieces):
-            raise TypeError("All pieces must be instances of Piece.")
-        self._pieces = new_pieces

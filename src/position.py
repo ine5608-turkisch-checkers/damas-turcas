@@ -37,14 +37,24 @@ class Position:
         self._col = col
 
     @property
-    def piece(self):
+    def coordinates(self) -> List[int]:
+        """Retorna coordenadas da posição em formato de lista"""
+
+        return [self.row, self.col]
+
+    @property
+    def piece(self) -> Optional[Piece]:
         return self._piece
 
     @piece.setter
     def piece(self, piece):
         if piece is not None and not isinstance(piece, Piece):
             raise TypeError(f"piece should be instance of Piece. Instead, piece is: {type(piece)}")
+
         self._piece = piece
+
+        if piece is not None:
+            piece.position = self #Associação bidirecional piece <-> position
 
     @property
     def is_occupied(self) -> bool:
@@ -58,12 +68,7 @@ class Position:
 
         return self.piece.is_king if self.is_occupied else False
 
-    def get_coordinate(self) -> List[int]:
-        """Retorna coordenadas da posição em formato de lista"""
-
-        return [self.row, self.col]
-
     def detach_piece(self)-> None:
         """Desvincula posição da peça"""
 
-        self._piece = None
+        self.piece.detach_position()
