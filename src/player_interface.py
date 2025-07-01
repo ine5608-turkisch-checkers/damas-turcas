@@ -25,6 +25,7 @@ class PlayerInterface(DogPlayerInterface):
         message = self.dog_server_interface.initialize(player_name, self)
         messagebox.showinfo(message=message)
         self.main_window.mainloop()  # Mantém a janela aberta
+        self.local_player_id = None
 
     def associate_canva(self):
         all_pieces = self.board.get_all_pieces()
@@ -91,6 +92,10 @@ class PlayerInterface(DogPlayerInterface):
         self.menu_file.add_command(label="Iniciar jogo", command=self.start_match)
         #self.menu_file.add_command(label="Restaurar estado inicial", command=self.start_game)
 
+    def update_gui(self, game_state):
+        print(game_state)
+        self.draw_board()
+        self.place_all_pieces()
 
     def draw_board(self):
         self.canvas.delete("all")
@@ -105,33 +110,82 @@ class PlayerInterface(DogPlayerInterface):
                 self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
                 # Placeholder pieces (can be removed or replaced)
-                if row < 3 and row > 0:
-                    self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill="#1C1C1C", tags="piece")
-                elif row > 4 and row < 7:
-                    self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill="#8B5E3C", tags="piece")
+                #if row < 3 and row > 0:
+                #    self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill="#1C1C1C", tags="piece")
+                #elif row > 4 and row < 7:
+                #    self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill="#8B5E3C", tags="piece")
+        
+    def place_all_pieces(self):
+        all_pieces = self.board.get_all_pieces()
+        
+        for owner, pieces in all_pieces.items():
+            is_local_owner = owner == self.board.player1
+
+            for piece in pieces:
+                if piece.position is not None:
+                    row = piece.position.row
+                    col = piece.position.col
+
+                    # Inverte a posição se for jogador remoto
+                    if not is_local_owner:
+                        row = BOARD_SIZE - 1 - row
+                        col = BOARD_SIZE - 1 - col
+
+                    x1 = col * TILE_SIZE + 10
+                    y1 = row * TILE_SIZE + 10
+                    x2 = x1 + TILE_SIZE - 20
+                    y2 = y1 + TILE_SIZE - 20
+
+                    # Cores fixas: player1 é sempre marrom, player2 é sempre preto
+                    fill_color = "#8B5E3C" if owner == 'player1' else "#1C1C1C"
+                    self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
 
     def on_tile_click(self, event):
         col = event.x // TILE_SIZE
         row = event.y // TILE_SIZE
         print(f"Clicked on tile: ({row}, {col})")  # Placeholder for move logic
 
+    ## Talvez seja diferente no nosso código
     def reset_board(self):
         self.draw_board()
         messagebox.showinfo("Reset", "Board has been reset.")
-
-    def start_game(self):
-        match_status = self.board.game_status()
-        if match_status == 2 or match_status == 6:
-            self.board.reset_game()
-            game_state = self.board.game_status()
-            self.update_gui(game_state)
+    
+    def receive_move(self, a_move):
+        self.board.receive_move(a_move)
+        game_state = self.board.game_status
+        self.update_gui(game_state)
 
     def start_match(self):
-        start_status = self.dog_server_interface.start_match(2) #2 = 2 jogadores
-        message = start_status.get_message()
-        messagebox.showinfo(message=message)
+        match_status = self.board.game_status
+        if match_status == 1:
+            answer = messagebox.askyesno("START", "Deseja iniciar uma nova partida?")
+            if answer:
+                start_status = self.dog_server_interface.start_match(2)
+                code = start_status.get_code()
+                message = start_status.get_message()
+                if code == "0" or code == "1":
+                    messagebox.showinfo(message=message)
+                else:
+                    players = start_status.get_players()
+                    local_player_id = start_status.get_local_id()
+
+                    self.board.start_match(players, local_player_id)
+                    self.local_player_id = local_player_id
+                    game_state = self.board.game_status
+                    self.update_gui(game_state)
+                    messagebox.showinfo(message=start_status.get_message())
 
     def receive_start(self, start_status):
-        message = start_status.get_message()
-        messagebox.showinfo(message=message)
+        self.start_game()
+        players = start_status.get_players()
+        local_player_id = start_status.get_local_id()
+        self.board.start_match(players, local_player_id)
+        game_state = self.board.game_status
+        self.update_gui(game_state)
 
+    def start_game(self):
+        match_status = self.board.game_status
+        if match_status == 2 or match_status == 6:
+            ##self.board.reset_game()
+            game_state = self.board.game_status
+            self.update_gui(game_state)

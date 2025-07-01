@@ -200,34 +200,20 @@ class Board:
         Atualiza os atributos dos jogadores existentes com os dados da Dog API.
         Define quem começa e retorna True se for o jogador local, False caso contrário.
         """
-
-        try:
-            player_data = json.loads(players)  # lista de dicionários com id e name
-        except json.JSONDecodeError:
-            raise ValueError("Invalid format of string players.")
-
-        if not isinstance(player_data, list) or len(player_data) != 2:
-            raise ValueError("Player list should have exactly 2 players.")
-
-        # Define quem é o jogador local e consequentemente o primeiro a jogar
-        if player_data[0]["id"] == local_player_id:
-            local = player_data[0]
-            remote = player_data[1]
-            my_turn = True
+        player1_name = players[0][0]
+        player1_id = players[0][1]
+        player1_order = players[0][2]
+        player2_name = players[1][0]
+        player2_id = players[1][1]
+        self.player1.reset()
+        self.player2.reset()
+        self.player1.id = player1_id
+        self.player1.name = player1_name
+        self.player2.id = player2_id
+        self.player2.name = player2_name
+        if player1_order == "1":
+            self.player1.toggle_turn()
+            self.game_status = GameStatus.WAITING_LOCAL_MOVE.value 
         else:
-            local = player_data[1]
-            remote = player_data[0]
-            my_turn = False
-
-        # Atualiza player1 e player2 (que já existem)
-        self.player1.id = int(local["id"])
-        self.player1.name = local["name"]
-        self.player1.is_black = my_turn
-        self.player1.is_its_turn = my_turn
-
-        self.player2.id = int(remote["id"])
-        self.player2.name = remote["name"]
-        self.player2.is_black = not my_turn
-        self.player2.is_its_turn = not my_turn
-
-        return my_turn
+            self.player2.toggle_turn()
+            self.match_status = GameStatus.WAITING_REMOTE_MOVE.value  

@@ -1,8 +1,5 @@
-from typing import Optional, List
+from typing import List
 from piece import Piece
-from position import Position
-
-
 
 class Player:
     def __init__(self):
@@ -12,6 +9,11 @@ class Player:
         self._is_its_turn: bool = False
         self._is_winner: bool = False
         self._pieces: List[Piece] = [Piece() for _ in range(16)] #Diagrama de sequência Initialize: Player instancia as suas peças sem posição
+
+    def reset(self):
+        self.id = 0
+        self.name = ""
+        self._is_winner = False
 
     @property
     def id(self) -> int:
