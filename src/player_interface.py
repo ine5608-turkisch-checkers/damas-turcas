@@ -93,7 +93,6 @@ class PlayerInterface(DogPlayerInterface):
         #self.menu_file.add_command(label="Restaurar estado inicial", command=self.start_game)
 
     def update_gui(self, game_state):
-        print(game_state)
         self.draw_board()
         self.place_all_pieces()
 
@@ -156,6 +155,7 @@ class PlayerInterface(DogPlayerInterface):
         self.update_gui(game_state)
 
     def start_match(self):
+        print("Entrou no start match")
         match_status = self.board.game_status
         if match_status == 1:
             answer = messagebox.askyesno("START", "Deseja iniciar uma nova partida?")
@@ -176,6 +176,7 @@ class PlayerInterface(DogPlayerInterface):
                     messagebox.showinfo(message=start_status.get_message())
 
     def receive_start(self, start_status):
+        print("Entrou no receive start")
         self.start_game()
         players = start_status.get_players()
         local_player_id = start_status.get_local_id()
@@ -184,6 +185,8 @@ class PlayerInterface(DogPlayerInterface):
         self.update_gui(game_state)
 
     def start_game(self):
+        print("Entrou no start game")
+
         match_status = self.board.game_status
         if match_status == 2 or match_status == 6:
             ##self.board.reset_game()

@@ -24,6 +24,7 @@ class Board:
         self._selected_position: Optional[Position] = None
         self._received_move: Optional[dict] = None
         self.place_pieces_on_board()
+        self.is_local_player: bool = False
 
     @property
     def player1(self) -> Player:
@@ -200,6 +201,7 @@ class Board:
         Atualiza os atributos dos jogadores existentes com os dados da Dog API.
         Define quem começa e retorna True se for o jogador local, False caso contrário.
         """
+
         player1_name = players[0][0]
         player1_id = players[0][1]
         player1_order = players[0][2]
@@ -212,8 +214,18 @@ class Board:
         self.player2.id = player2_id
         self.player2.name = player2_name
         if player1_order == "1":
+            self.is_local_player = True
             self.player1.toggle_turn()
             self.game_status = GameStatus.WAITING_LOCAL_MOVE.value 
         else:
             self.player2.toggle_turn()
-            self.match_status = GameStatus.WAITING_REMOTE_MOVE.value  
+            self.match_status = GameStatus.WAITING_REMOTE_MOVE.value
+        
+        ## Continuar lógica de inversão de tabuleiro se jogador é player 2
+        print(f"local_player_id: {local_player_id}")
+        if self.is_local_player:
+            print("Este é o jogador 1")
+        else:
+            print("Este é o jogador 2")
+        print(f"player1_id: {self.player1.id}")
+        print(f"player2_id: {self.player2.id}")
