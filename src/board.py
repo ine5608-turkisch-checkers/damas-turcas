@@ -107,14 +107,14 @@ class Board:
 
     def place_pieces_on_board(self):
         num_piece = 0
-        for k in range(1, 3):  # Linhas 0 e 1
+        for k in range(5, 7):  # Linhas 0 e 1
             for i in range(0, 8):  # Colunas 0 a 7
                 position = self._positions[k][i]
                 self._player1.associate_piece_position(position, num_piece)
                 num_piece += 1
 
         num_piece = 0
-        for k in range(5, 7):  # Linhas 6 e 7
+        for k in range(1, 3):  # Linhas 6 e 7
             for i in range(0, 8):  # Colunas 0 a 7
                 position = self._positions[k][i]
                 self._player2.associate_piece_position(position, num_piece)
@@ -201,6 +201,7 @@ class Board:
         Atualiza os atributos dos jogadores existentes com os dados da Dog API.
         Define quem começa e retorna True se for o jogador local, False caso contrário.
         """
+        print("Entrou no start match")
 
         player1_name = players[0][0]
         player1_id = players[0][1]
@@ -219,9 +220,9 @@ class Board:
             self.game_status = GameStatus.WAITING_LOCAL_MOVE.value 
         else:
             self.player2.toggle_turn()
-            self.match_status = GameStatus.WAITING_REMOTE_MOVE.value
+            self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
         
-        ## Continuar lógica de inversão de tabuleiro se jogador é player 2
+        ## Para desenvolvimento ###########
         print(f"local_player_id: {local_player_id}")
         if self.is_local_player:
             print("Este é o jogador 1")
@@ -229,3 +230,5 @@ class Board:
             print("Este é o jogador 2")
         print(f"player1_id: {self.player1.id}")
         print(f"player2_id: {self.player2.id}")
+
+        ###################################
