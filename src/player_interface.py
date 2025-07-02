@@ -11,6 +11,7 @@ BOARD_SIZE = 8
 TILE_SIZE = 80
 ROOT_BG_COLOR = "#3B4A59"
 ROOT_FONT_COLOR = "#F2F2F2"
+#self.canvas.tag_bind(rect_id, "<Button-1>", lambda event, rid=rect_id: self.on_tile_click(event, rid))
 
 class PlayerInterface(DogPlayerInterface):
     def __init__(self):
@@ -18,18 +19,43 @@ class PlayerInterface(DogPlayerInterface):
         self.fill_main_window()  # Organiza a janela e cria os widgets
         self.board = Board()
         self.message_notification = None  # Variável para a mensagem de notificação
+        self.all_positions = []
+        self.all_pieces = []
         self.draw_board()  # Desenha o tabuleiro inicial
         self.associate_canva()
         player_name = simpledialog.askstring(title="Player identification", prompt="Qual o seu nome?")
         self.dog_server_interface = DogActor()
         message = self.dog_server_interface.initialize(player_name, self)
         messagebox.showinfo(message=message)
-        self.main_window.mainloop()  # Mantém a janela aberta
+        self.main_window.mainloop()  # Mantém a janela
         self.local_player_id = None
 
     def associate_canva(self):
-        all_pieces = self.board.get_all_pieces()
-        #tem que fazer o restante da associação do próprio canva
+        all_pieces_back = self.board.get_all_pieces()
+        linha = 0
+        for owner, pieces in all_pieces_back.items():
+            is_local_owner = owner == self.board.player1
+            self.all_pieces.append([])
+            for piece in pieces:
+                if piece.position is not None:
+                    row = piece.position.row
+                    col = piece.position.col
+
+                    # Inverte a posição se for jogador remoto
+                    if not is_local_owner:
+                        row = BOARD_SIZE - 1 - row
+                        col = BOARD_SIZE - 1 - col
+
+                    x1 = col * TILE_SIZE + 10
+                    y1 = row * TILE_SIZE + 10
+                    x2 = x1 + TILE_SIZE - 20
+                    y2 = y1 + TILE_SIZE - 20
+
+                    # Cores fixas: player1 é sempre marrom, player2 é sempre preto
+                    fill_color = "#8B5E3C" if owner == 'player1' else "#1C1C1C"
+                    piece_canva = self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
+                    self.all_pieces[linha].append(piece_canva)
+            linha += 1
 
     def fill_main_window(self):
         # Configuração do título, tamanho e fundo da janela
@@ -65,7 +91,7 @@ class PlayerInterface(DogPlayerInterface):
         # Canvas para desenhar o tabuleiro
         self.canvas = tk.Canvas(self.main_window, width=BOARD_SIZE*TILE_SIZE, height=BOARD_SIZE*TILE_SIZE)
         self.canvas.pack()
-        self.canvas.bind("<Button-1>", self.on_tile_click)
+        #self.canvas.bind("<Button-1>", self.on_tile_click)
 
         # Área de controle para mensagens
         self.message_notification = tk.Label(self.main_window, text="Message notification here", font=("Arial", 12), bg=ROOT_BG_COLOR, fg=ROOT_FONT_COLOR)
@@ -94,57 +120,30 @@ class PlayerInterface(DogPlayerInterface):
 
     def update_gui(self, game_state):
         self.draw_board()
-        self.place_all_pieces()
 
     def draw_board(self):
         self.canvas.delete("all")
-        colors = ["#C8AD7F", "#5C3A21"]  # light and dark brown
-        for row in range(BOARD_SIZE):
-            for col in range(BOARD_SIZE):
+        # Inicializa a matriz 8x8
+
+        colors = ["#C8AD7F", "#5C3A21"]
+
+        for row in range(8):
+            self.all_positions.append([])
+            for col in range(8):
                 x1 = col * TILE_SIZE
                 y1 = row * TILE_SIZE
                 x2 = x1 + TILE_SIZE
                 y2 = y1 + TILE_SIZE
                 color = colors[(row + col) % 2]
-                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
 
-                # Placeholder pieces (can be removed or replaced)
-                #if row < 3 and row > 0:
-                #    self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill="#1C1C1C", tags="piece")
-                #elif row > 4 and row < 7:
-                #    self.canvas.create_oval(x1+10, y1+10, x2-10, y2-10, fill="#8B5E3C", tags="piece")
-        
-    def place_all_pieces(self):
-        all_pieces = self.board.get_all_pieces()
-        
-        for owner, pieces in all_pieces.items():
-            is_local_owner = owner == self.board.player1
+                rect_id = self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline="black")
+                self.all_positions[row].append({
+                    "rect_id": rect_id,
+                    "row": row,
+                    "col": col,
+                    "obj_piece_back": None
+                })
 
-            for piece in pieces:
-                if piece.position is not None:
-                    row = piece.position.row
-                    col = piece.position.col
-
-                    # Inverte a posição se for jogador remoto
-                    if not is_local_owner:
-                        row = BOARD_SIZE - 1 - row
-                        col = BOARD_SIZE - 1 - col
-
-                    x1 = col * TILE_SIZE + 10
-                    y1 = row * TILE_SIZE + 10
-                    x2 = x1 + TILE_SIZE - 20
-                    y2 = y1 + TILE_SIZE - 20
-
-                    # Cores fixas: player1 é sempre marrom, player2 é sempre preto
-                    fill_color = "#8B5E3C" if owner == 'player1' else "#1C1C1C"
-                    self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
-
-    def on_tile_click(self, event):
-        col = event.x // TILE_SIZE
-        row = event.y // TILE_SIZE
-        print(f"Clicked on tile: ({row}, {col})")  # Placeholder for move logic
-
-    ## Talvez seja diferente no nosso código
     def reset_board(self):
         self.draw_board()
         messagebox.showinfo("Reset", "Board has been reset.")

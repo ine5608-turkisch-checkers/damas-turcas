@@ -107,14 +107,14 @@ class Board:
 
     def place_pieces_on_board(self):
         num_piece = 0
-        for k in range(0, 2):  # Linhas 0 e 1
+        for k in range(1, 3):  # Linhas 0 e 1
             for i in range(0, 8):  # Colunas 0 a 7
                 position = self._positions[k][i]
                 self._player1.associate_piece_position(position, num_piece)
                 num_piece += 1
 
         num_piece = 0
-        for k in range(6, 8):  # Linhas 6 e 7
+        for k in range(5, 7):  # Linhas 6 e 7
             for i in range(0, 8):  # Colunas 0 a 7
                 position = self._positions[k][i]
                 self._player2.associate_piece_position(position, num_piece)
