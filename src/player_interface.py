@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import simpledialog
 from tkinter.messagebox import showinfo
+from typing import List, Tuple
 
 from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
@@ -16,13 +17,14 @@ ROOT_FONT_COLOR = "#F2F2F2"
 class PlayerInterface(DogPlayerInterface):
     def __init__(self):
         self.main_window = tk.Tk()  # Instancia a janela principal
+        self.piece_id_by_position = {} #ID das posições do canva
         self.fill_main_window()  # Organiza a janela e cria os widgets
         self.board = Board()
         #self.message_notification = None  # Variável para a mensagem de notificação
         self.all_positions = []
         self.all_pieces = []
         self.draw_board()  # Desenha o tabuleiro inicial
-        self.associate_canva()
+        self.associate_canva() # Coloca as peças no tabuleiro
         player_name = simpledialog.askstring(title="Player identification", prompt="Qual o seu nome?")
         self.dog_server_interface = DogActor()
         message = self.dog_server_interface.initialize(player_name, self)
@@ -86,11 +88,14 @@ class PlayerInterface(DogPlayerInterface):
 
         self.menu_file = tk.Menu(self.menubar)
         self.menubar.add_cascade(menu=self.menu_file, label="File")
+
         # Adicionar itens de menu a cada menu adicionado à barra de menu:
         self.menu_file.add_command(label="Iniciar jogo", command=self.start_match)
         #self.menu_file.add_command(label="Restaurar estado inicial", command=self.start_game)
 
     def update_gui(self, game_state):
+        """Atualiza interface com as peças e estados do jogo"""
+
         self.associate_canva()
 
     def draw_board(self):
@@ -118,7 +123,8 @@ class PlayerInterface(DogPlayerInterface):
                 })
 
     def associate_canva(self):
-        """Recoloca as peças no tabuleiro"""
+        """Recoloca as peças no tabuleiro. Lembrando que a origem
+        está no canto superior esquerdo"""
 
         all_pieces_back = self.board.get_all_pieces()
         linha = 0
@@ -138,13 +144,9 @@ class PlayerInterface(DogPlayerInterface):
                     y2 = y1 + TILE_SIZE - 20
 
                     piece_canva = self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
+                    self.piece_id_by_position[(row, col)] = piece_canva
 
-                    # Aqui acontece o tag_bind
-                    if self.board.player1.is_its_turn:
-                        self.canvas.tag_bind(piece_canva, "<Button-1>", lambda event, r=row, c=col: self.on_piece_click(r, c))
-                    else:
-                        self.canvas.tag_bind(piece_canva, "<Button-1>", lambda event: print("Não é o seu turno"))
-                    
+                    # Notificação na tela de mensagem sobre o status do jogo
                     if self.message_notification is not None:
                         self.message_notification.config(text=self.message_game_status())
                         
@@ -152,6 +154,8 @@ class PlayerInterface(DogPlayerInterface):
             linha += 1
 
     def reset_board(self):
+        """Retira todas peças do tabuleiro"""
+
         self.draw_board()
         messagebox.showinfo("Reset", "Board has been reset.")
     
@@ -162,6 +166,7 @@ class PlayerInterface(DogPlayerInterface):
 
     def start_match(self):
         print("Entrou no start match")
+
         match_status = self.board.game_status
         if match_status == 1:
             answer = messagebox.askyesno("START", "Deseja iniciar uma nova partida?")
@@ -182,14 +187,19 @@ class PlayerInterface(DogPlayerInterface):
 
                     self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
                     self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
-                    
+
                     self.update_gui(game_state)
+
+                    #Permitir movimento inicial
+                    moveable_pieces = [(5, col) for col in range(8)] #3a Linha de baixo para cima 
+                    self.enable_moveable_pieces(moveable_pieces)
         
         print(game_state)
 
 
     def receive_start(self, start_status):
         print("Entrou no receive start")
+
         self.start_game()
         players = start_status.get_players()
         local_player_id = start_status.get_local_id()
@@ -213,6 +223,8 @@ class PlayerInterface(DogPlayerInterface):
         self.update_gui(game_state)
 
     def on_piece_click(self, row: int, col: int):
+        """Ação quando se clica em uma peça habilitada"""
+
         message = f"Peça clicada na posição lógica: ({row}, {col})"
         print(message)
 
@@ -228,9 +240,24 @@ class PlayerInterface(DogPlayerInterface):
                     print(f"De quem é essa peça: {owner_label}")
                     break
         else:
-            print("Nenhuma peça nessa posição") 
+            print("Nenhuma peça nessa posição")
+
+    def enable_moveable_pieces(self, moveable_pieces: List[Tuple[int, int]]):
+        """Habilita peças específicas para clique, se for o turno do player1."""
+
+        for row, col in moveable_pieces:
+            canvas_id = self.piece_id_by_position.get((row, col))
+            if canvas_id is None:
+                continue  # nenhuma peça desenhada nessa posição
+
+            if self.board.player1.is_its_turn:
+                self.canvas.tag_bind(canvas_id, "<Button-1>", lambda event, r=row, c=col: self.on_piece_click(r, c))
+            else:
+                self.canvas.tag_bind(canvas_id, "<Button-1>", lambda event: print("Não é o seu turno"))
 
     def message_game_status(self):
+        """Retorna mensagem referente ao estado do jogo"""
+
         game_status = self.board.game_status
 
         match game_status:

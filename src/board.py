@@ -106,8 +106,11 @@ class Board:
         return self._positions[pos.row][pos.col].piece
 
     def place_pieces_on_board(self):
+        """Coloca peças já instanciadas nas posições iniciais.
+        Lembrando que a origem está no canto superior esquerdo"""
+
         num_piece = 0
-        for k in range(5, 7):  # Linhas 0 e 1
+        for k in range(5, 7):  # Linhas 1 e 2
             for i in range(0, 8):  # Colunas 0 a 7
                 position = self._positions[k][i]
                 self._player1.associate_piece_position(position, num_piece)
