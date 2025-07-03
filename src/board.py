@@ -224,9 +224,31 @@ class Board:
         else:
             self.player2.toggle_turn()
             self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
+
+    def message_game_status(self) -> str:
+        """Retorna mensagem referente ao estado do jogo"""
+
+        game_status = self.game_status
+
+        match game_status:
+            case 1:
+                return f"Para iniciar uma nova partida, clique em 'Iniciar jogo' no canto esquerdo superior."
+            case 2:
+                winner = self.winner
+                if winner is None:
+                    return f"Partida terminada sem vencedores."
+                else:
+                    return f"Partida terminada. {winner.name} venceu a partida."
+            case 3:
+                return f"Sua vez. Escolha uma peça."
+            case 4:
+                return f"Agora escolha um destino para a sua peça."
+            case 5:
+                return f"Seu adversário está jogando."
+            case 6:
+                return f"Partida abandonada."
         
         ## Para desenvolvimento ###########
-        print(f"local_player_id: {local_player_id}")
         if self.is_local_player:
             print("Este é o jogador 1")
         else:

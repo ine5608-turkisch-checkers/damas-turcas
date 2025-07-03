@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import simpledialog
 from tkinter.messagebox import showinfo
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
@@ -17,11 +17,11 @@ ROOT_FONT_COLOR = "#F2F2F2"
 class PlayerInterface(DogPlayerInterface):
     def __init__(self):
         self.main_window = tk.Tk()  # Instancia a janela principal
-        self.piece_id_by_position = {} #ID das posições do canva
+        self.pieces_id_by_position = {} #ID das posições do canva
+        self.all_positions = []
         self.fill_main_window()  # Organiza a janela e cria os widgets
         self.board = Board()
         #self.message_notification = None  # Variável para a mensagem de notificação
-        self.all_positions = []
         self.all_pieces = []
         self.draw_board()  # Desenha o tabuleiro inicial
         self.associate_canva() # Coloca as peças no tabuleiro
@@ -30,7 +30,6 @@ class PlayerInterface(DogPlayerInterface):
         message = self.dog_server_interface.initialize(player_name, self)
         messagebox.showinfo(message=message)
         self.main_window.mainloop()  # Mantém a janela
-        self.local_player_id = None
 
     def fill_main_window(self):
         # Configuração do título, tamanho e fundo da janela
@@ -121,15 +120,23 @@ class PlayerInterface(DogPlayerInterface):
                     "col": col,
                     "obj_piece_back": None
                 })
+    
+    def clear_pieces(self):
+        for canvas_id in self.pieces_id_by_position.values():
+            self.canvas.delete(canvas_id)
+        self.pieces_id_by_position.clear()
 
     def associate_canva(self):
         """Recoloca as peças no tabuleiro. Lembrando que a origem
         está no canto superior esquerdo"""
 
+        self.clear_pieces() #Retira todas peças antes de recolocá-las. Forma mais segura.
+
         all_pieces_back = self.board.get_all_pieces()
         linha = 0
+        all_pieces = []
         for owner, pieces in all_pieces_back.items():
-            self.all_pieces.append([])
+            all_pieces.append([])
             for piece in pieces:
                 if piece.position is not None:
                     row = piece.position.row
@@ -144,13 +151,11 @@ class PlayerInterface(DogPlayerInterface):
                     y2 = y1 + TILE_SIZE - 20
 
                     piece_canva = self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
-                    self.piece_id_by_position[(row, col)] = piece_canva
+                    self.pieces_id_by_position[(row, col)] = piece_canva
 
                     # Notificação na tela de mensagem sobre o status do jogo
                     if self.message_notification is not None:
-                        self.message_notification.config(text=self.message_game_status())
-                        
-                    self.all_pieces[linha].append(piece_canva)
+                        self.message_notification.config(text=self.board.message_game_status())
             linha += 1
 
     def reset_board(self):
@@ -159,12 +164,12 @@ class PlayerInterface(DogPlayerInterface):
         self.draw_board()
         messagebox.showinfo("Reset", "Board has been reset.")
     
-    def receive_move(self, a_move):
+    def receive_move(self, a_move) -> None:
         self.board.receive_move(a_move)
         game_state = self.board.game_status
         self.update_gui(game_state)
 
-    def start_match(self):
+    def start_match(self) -> None:
         print("Entrou no start match")
 
         match_status = self.board.game_status
@@ -181,7 +186,6 @@ class PlayerInterface(DogPlayerInterface):
                     local_player_id = start_status.get_local_id()
 
                     self.board.start_match(players, local_player_id)
-                    self.local_player_id = local_player_id
                     game_state = self.board.game_status
                     messagebox.showinfo(message=start_status.get_message())
 
@@ -196,8 +200,7 @@ class PlayerInterface(DogPlayerInterface):
         
         print(game_state)
 
-
-    def receive_start(self, start_status):
+    def receive_start(self, start_status) -> None:
         print("Entrou no receive start")
 
         self.start_game()
@@ -212,7 +215,7 @@ class PlayerInterface(DogPlayerInterface):
         print(game_state)
         self.update_gui(game_state)
 
-    def start_game(self):
+    def start_game(self) -> None:
         print("Entrou no start game")
 
         match_status = self.board.game_status
@@ -222,7 +225,7 @@ class PlayerInterface(DogPlayerInterface):
             ... # Definir o que acontece se FINISHED ou ABANDONED
         self.update_gui(game_state)
 
-    def on_piece_click(self, row: int, col: int):
+    def on_piece_click(self, row: int, col: int) -> None:
         """Ação quando se clica em uma peça habilitada"""
 
         message = f"Peça clicada na posição lógica: ({row}, {col})"
@@ -242,38 +245,16 @@ class PlayerInterface(DogPlayerInterface):
         else:
             print("Nenhuma peça nessa posição")
 
-    def enable_moveable_pieces(self, moveable_pieces: List[Tuple[int, int]]):
+    def enable_moveable_pieces(self, moveable_pieces: List[Tuple[int, int]]) -> None:
         """Habilita peças específicas para clique, se for o turno do player1."""
 
         for row, col in moveable_pieces:
-            canvas_id = self.piece_id_by_position.get((row, col))
+            canvas_id = self.pieces_id_by_position.get((row, col))
             if canvas_id is None:
                 continue  # nenhuma peça desenhada nessa posição
 
+            self.canvas.tag_unbind(canvas_id, "<Button-1>") #Para não acumular tag_binds
             if self.board.player1.is_its_turn:
                 self.canvas.tag_bind(canvas_id, "<Button-1>", lambda event, r=row, c=col: self.on_piece_click(r, c))
             else:
                 self.canvas.tag_bind(canvas_id, "<Button-1>", lambda event: print("Não é o seu turno"))
-
-    def message_game_status(self):
-        """Retorna mensagem referente ao estado do jogo"""
-
-        game_status = self.board.game_status
-
-        match game_status:
-            case 1:
-                return f"Para iniciar uma nova partida, clique em 'Iniciar jogo' no canto esquerdo superior."
-            case 2:
-                winner = self.board.winner
-                if winner is None:
-                    return f"Partida terminada sem vencedores."
-                else:
-                    return f"Partida terminada. {winner.name} venceu a partida."
-            case 3:
-                return f"Sua vez. Escolha uma peça."
-            case 4:
-                return f"Agora escolha um destino para a sua peça."
-            case 5:
-                return f"Seu adversário está jogando."
-            case 6:
-                return f"Partida abandonada."
