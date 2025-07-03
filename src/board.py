@@ -273,3 +273,7 @@ class Board:
                     moves.append(dest)
 
         return moves
+
+    def switch_turn(self) -> None:
+        self._player1.toggle_turn()
+        self._player2.toggle_turn()
