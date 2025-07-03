@@ -184,6 +184,7 @@ class PlayerInterface(DogPlayerInterface):
                 else:
                     players = start_status.get_players()
                     local_player_id = start_status.get_local_id()
+                    print(f"local_player_id: {local_player_id}")
 
                     self.board.start_match(players, local_player_id)
                     game_state = self.board.game_status
@@ -207,6 +208,8 @@ class PlayerInterface(DogPlayerInterface):
         players = start_status.get_players()
         local_player_id = start_status.get_local_id()
         self.board.start_match(players, local_player_id)
+        print(f"local_player_id: {local_player_id}")
+
         game_state = self.board.game_status
 
         self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
@@ -227,26 +230,53 @@ class PlayerInterface(DogPlayerInterface):
 
     def on_piece_click(self, row: int, col: int) -> None:
         """Ação quando se clica em uma peça habilitada"""
+        print(f"Entrou no on_piece_click")
 
-        message = f"Peça clicada na posição lógica: ({row}, {col})"
-        print(message)
+        self.clear_selection_highlight()
 
-        real_row = row
-        real_col = col
+        if self.board.game_status != 3:
+            return
 
-        pos = self.board.positions[real_row][real_col]
-        piece = pos.piece
+        position_at_clicked = self.board.positions[row][col]
+        piece_at_clicked = position_at_clicked.piece
+        print(f"Peça na posição ({row}, {col}):", piece_at_clicked)
 
-        if piece:
-            for owner_label, pieces in self.board.get_all_pieces().items():
-                if piece in pieces:
-                    print(f"De quem é essa peça: {owner_label}")
-                    break
-        else:
-            print("Nenhuma peça nessa posição")
+        if not piece_at_clicked:
+            return
+
+        local_player_pieces = self.board.player1.pieces if self.board.is_local_player else self.board.player2.pieces
+        if piece_at_clicked not in local_player_pieces:
+            return
+        
+        # Marca tile escolhido
+        HIGHLIGHT_COLOR = "#EEDD82"
+        tile_id = self.all_positions[row][col]["rect_id"]
+        self.canvas.itemconfig(tile_id, fill=HIGHLIGHT_COLOR)
+        self.selected_tile_highlight = tile_id #Guardo id do tile para poder voltar a cor original
+
+        self.board.selected_position = position_at_clicked  # Guarda origem no modelo
+        possible_moves = self.board.get_possible_moves(position_at_clicked)  # Só casas válidas
+        print(f"possible_moves: {possible_moves}")
+
+        ###################### Felipe: parei aqui ########################################################################
+        for move in possible_moves:
+            r, c = move.row, move.col
+            tile_id = self.all_positions[r][c]["rect_id"]
+            self.canvas.tag_bind(tile_id, "<Button-1>", lambda event, dest_row=r, dest_col=c: self.make_move(dest_row, dest_col))
+
+    def clear_selection_highlight(self) -> None:
+        """Percorre todos os tiles e restaura qualquer tile com cor de destaque para sua cor original."""
+
+        for row in range(BOARD_SIZE):
+            for col in range(BOARD_SIZE):
+                tile_id = self.all_positions[row][col]["rect_id"]
+                current_color = self.canvas.itemcget(tile_id, "fill")
+                if current_color == "#EEDD82":  # cor de destaque
+                    default_color = "#C8AD7F" if (row + col) % 2 == 0 else "#5C3A21"
+                    self.canvas.itemconfig(tile_id, fill=default_color)
 
     def enable_moveable_pieces(self, moveable_pieces: List[Tuple[int, int]]) -> None:
-        """Habilita peças específicas para clique, se for o turno do player1."""
+        """Habilita peças específicas para clique."""
 
         for row, col in moveable_pieces:
             canvas_id = self.pieces_id_by_position.get((row, col))
@@ -258,3 +288,33 @@ class PlayerInterface(DogPlayerInterface):
                 self.canvas.tag_bind(canvas_id, "<Button-1>", lambda event, r=row, c=col: self.on_piece_click(r, c))
             else:
                 self.canvas.tag_bind(canvas_id, "<Button-1>", lambda event: print("Não é o seu turno"))
+
+
+    ############## Felipe: Este método está no final do on_piece_click. Ainda não foi testado #############################
+    def make_move(self, dest_row: int, dest_col: int) -> None:
+        origin = self.board.selected_position
+        destination = self.board.positions[dest_row][dest_col]
+
+        if not origin:
+            return
+
+        self.board.move_piece(origin, destination)
+        self.board.selected_position = None
+
+        self.clear_pieces()
+        self.associate_canva()
+
+        # Desabilita qualquer clique em casas antigas
+        for row in range(8):
+            for col in range(8):
+                tile_id = self.all_positions[row][col]["rect_id"]
+                self.canvas.tag_unbind(tile_id, "<Button-1>")
+
+        # Alterna turno (parte da lógica do board se aplicável)
+        self.board.player1.toggle_turn()
+        self.board.player2.toggle_turn()
+
+        # Opcional: permitir peças do outro jogador, se local ainda for player1
+        if self.board.player1.is_its_turn:
+            moveable_pieces = [(p.position.row, p.position.col) for p in self.board.player1.pieces if p.position]
+            self.enable_moveable_pieces(moveable_pieces)

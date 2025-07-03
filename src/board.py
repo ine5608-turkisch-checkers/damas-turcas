@@ -173,17 +173,6 @@ class Board:
 
         return True
 
-    def get_possible_moves(self, pos: Position) -> List[Position]:
-        moves = []
-        directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-        for dr, dc in directions:
-            r, c = pos.row + dr, pos.col + dc
-            if 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE:
-                dest = self._positions[r][c]
-                if not dest.is_occupied and self.is_valid_move(pos, dest):
-                    moves.append(dest)
-        return moves
-
     # Felipe: Check winning condition apenas abrange vitória por inexistência de peças
     # não capturadas por parte de um dos jogadores
     def _evaluate_end_condition(self) -> None:
@@ -225,6 +214,16 @@ class Board:
             self.player2.toggle_turn()
             self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
 
+        ## Para desenvolvimento ###########
+        if self.is_local_player:
+            print("Este é o jogador 1")
+        else:
+            print("Este é o jogador 2")
+        print(f"player1_id: {self.player1.id}")
+        print(f"player2_id: {self.player2.id}")
+
+        ###################################
+
     def message_game_status(self) -> str:
         """Retorna mensagem referente ao estado do jogo"""
 
@@ -247,13 +246,30 @@ class Board:
                 return f"Seu adversário está jogando."
             case 6:
                 return f"Partida abandonada."
-        
-        ## Para desenvolvimento ###########
-        if self.is_local_player:
-            print("Este é o jogador 1")
-        else:
-            print("Este é o jogador 2")
-        print(f"player1_id: {self.player1.id}")
-        print(f"player2_id: {self.player2.id}")
 
-        ###################################
+    def get_possible_moves(self, pos: Position) -> List[Position]:
+        piece = pos.piece
+        if not piece:
+            return []
+
+        player = self._player1 if piece in self._player1.pieces else self._player2
+        direction = -1 if player == self._player1 else 1  # "Para frente"
+
+        moves = []
+
+        # Para frente
+        r, c = pos.row + direction, pos.col
+        if 0 <= r < BOARD_SIZE:
+            dest = self._positions[r][c]
+            if not dest.is_occupied:
+                moves.append(dest)
+
+        # Para os lados (esquerda e direita)
+        for dc in [-1, 1]:
+            r, c = pos.row, pos.col + dc
+            if 0 <= c < BOARD_SIZE:
+                dest = self._positions[r][c]
+                if not dest.is_occupied:
+                    moves.append(dest)
+
+        return moves
