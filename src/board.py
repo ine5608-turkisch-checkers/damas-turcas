@@ -132,6 +132,10 @@ class Board:
         """Move peça de uma posição de origem à uma posição de destino.
         Promove se necessário e checa condição de término de jogo"""
 
+        print("Entrou em move_piece")
+        print(f"origin: {origin} e origin.row e col ({origin.row}, {origin.col})")
+        print(f"destination: {origin} e destination.row e col ({destination.row}, {destination.col})")
+
         piece = self.piece_at(origin)
         if piece is None:
             raise ValueError("Sem peça na origem.")
@@ -149,29 +153,6 @@ class Board:
         if piece and not piece.is_king:
             if (piece.is_black and pos.row == 0) or (not piece.is_black and pos.row == BOARD_SIZE - 1):
                 piece.is_king = True
-
-
-    # Felipe: Não acho que esse método esteja correto.
-    # A verificação do movimento é sempre de si mesmo e cada jogador tem a impressão
-    # que está jogando do "sul" do tabuleiro
-    def is_valid_move(self, origin: Position, destination: Position) -> bool:
-        piece = self.piece_at(origin)
-        if piece is None or destination.is_occupied:
-            return False
-
-        row_diff = destination.row - origin.row
-        col_diff = destination.col - origin.col
-
-        if abs(row_diff) != 1 or abs(col_diff) != 1:
-            return False
-
-        if not piece.is_king:
-            if piece.is_black and row_diff != -1:
-                return False
-            if not piece.is_black and row_diff != 1:
-                return False
-
-        return True
 
     # Felipe: Check winning condition apenas abrange vitória por inexistência de peças
     # não capturadas por parte de um dos jogadores
@@ -193,7 +174,7 @@ class Board:
         Atualiza os atributos dos jogadores existentes com os dados da Dog API.
         Define quem começa e retorna True se for o jogador local, False caso contrário.
         """
-        print("Entrou no start match")
+        print("Entrou no board.start match")
 
         player1_name = players[0][0]
         player1_id = players[0][1]
@@ -247,27 +228,30 @@ class Board:
             case 6:
                 return f"Partida abandonada."
 
-    def get_possible_moves(self, pos: Position) -> List[Position]:
-        piece = pos.piece
+    def get_possible_moves(self, origin: Position) -> List[Position]:
+        """Retorna as posições de destino possíveis para uma dada peça"""
+        print("Entrou no board.possible_moves")
+
+        piece = origin.piece
         if not piece:
             return []
 
         player = self._player1 if piece in self._player1.pieces else self._player2
-        direction = -1 if player == self._player1 else 1  # "Para frente"
+        direction = -1 if player == self._player1 else 1  # Sempre vai ser true, não?
 
         moves = []
 
-        # Para frente
-        r, c = pos.row + direction, pos.col
-        if 0 <= r < BOARD_SIZE:
+        # Para frente como peça normal
+        r, c = origin.row + direction, origin.col
+        if 0 <= r < BOARD_SIZE: # 0 <= linha < 7
             dest = self._positions[r][c]
             if not dest.is_occupied:
                 moves.append(dest)
 
-        # Para os lados (esquerda e direita)
+        # Para os lados (esquerda e direita) como peça normal
         for dc in [-1, 1]:
-            r, c = pos.row, pos.col + dc
-            if 0 <= c < BOARD_SIZE:
+            r, c = origin.row, origin.col + dc
+            if 0 <= c < BOARD_SIZE: # 0 <= coluna < 7
                 dest = self._positions[r][c]
                 if not dest.is_occupied:
                     moves.append(dest)

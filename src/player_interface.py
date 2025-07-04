@@ -266,8 +266,10 @@ class PlayerInterface(DogPlayerInterface):
 
             possible_moves = self.board.get_possible_moves(position_at_clicked)  # Positions válidas
             possible_coords = [(pos.row, pos.col) for pos in possible_moves] # Tuplas válidas
+            print(f"Coordenadas possíveis para se mover:{possible_coords}")
             if possible_coords: #Se lista de movimentos possíveis tem algo
                 self.board.game_status = 4
+                print(f"self.board.selected_position: {self.board.selected_position}")
                 self.enable_possible_destinations(possible_coords)
 
         elif game_status == 4: # Ocurring local move
@@ -277,11 +279,8 @@ class PlayerInterface(DogPlayerInterface):
                 return
 
             destination = position_at_clicked
-            if not self.board.is_valid_move(origin, destination):
-                print("Movimento inválido.")
-                return
 
-            self.board.move_piece(origin, destination)
+            self.board.move_piece(origin, destination) #Move a peça para posição selecionada
             self.board.selected_position = None #Reseta posição anterior
             self.board.game_status = 5 # Waiting remote move
 
@@ -322,6 +321,7 @@ class PlayerInterface(DogPlayerInterface):
         self.clear_all_tile_binds()
         for row,col in possible_destinations:
             tile_id = self.all_positions[row][col]["rect_id"]
+            print(f"Tiles habilitados: {(row, col)}\n")
             self.canvas.tag_bind(tile_id, "<Button-1>", lambda event, r=row, c=col: self.make_move(r, c))
 
     def clear_all_tile_binds(self) -> None:
