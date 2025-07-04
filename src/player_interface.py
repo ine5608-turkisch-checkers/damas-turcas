@@ -81,8 +81,8 @@ class PlayerInterface(DogPlayerInterface):
         self.spacer = tk.Label(self.controls_frame, text="", bg=ROOT_BG_COLOR)
         self.spacer.grid(row=0, column=0, sticky="ew")
 
-        self.withdraw_button = tk.Button(self.controls_frame, text="Withdraw", command=self.reset_board, bg=ROOT_BG_COLOR, fg=ROOT_FONT_COLOR)
-        self.withdraw_button.grid(row=0, column=1, padx=10, sticky="e")
+        #self.withdraw_button = tk.Button(self.controls_frame, text="Withdraw", command=self.reset_board, bg=ROOT_BG_COLOR, fg=ROOT_FONT_COLOR)
+        #self.withdraw_button.grid(row=0, column=1, padx=10, sticky="e")
 
         self.menubar = tk.Menu(self.main_window)
         self.menubar.option_add("*tearOff", False)
@@ -176,6 +176,7 @@ class PlayerInterface(DogPlayerInterface):
         print("Entrou no start match")
 
         match_status = self.board.game_status
+        print("estado do jogo: ", match_status)
         if match_status == 1:
             answer = messagebox.askyesno("START", "Deseja iniciar uma nova partida?")
             if answer:
@@ -183,8 +184,9 @@ class PlayerInterface(DogPlayerInterface):
                 code = start_status.get_code()
                 message = start_status.get_message()
                 if code == "0" or code == "1":
+                    print("jogadores insuficientes")
                     messagebox.showinfo(message=message)
-                else:
+                elif code == 2:
                     players = start_status.get_players()
                     local_player_id = start_status.get_local_id()
                     print(f"local_player_id: {local_player_id}")
@@ -192,7 +194,6 @@ class PlayerInterface(DogPlayerInterface):
                     self.board.start_match(players, local_player_id)
                     game_state = self.board.game_status
                     messagebox.showinfo(message=start_status.get_message())
-
                     self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
                     self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
 
@@ -201,8 +202,15 @@ class PlayerInterface(DogPlayerInterface):
                     #Permitir movimento inicial
                     moveable_pieces = [(5, col) for col in range(8)] #3a Linha de baixo para cima 
                     self.enable_moveable_pieces(moveable_pieces)
-        
-        print(game_state)
+                    print("jogue disgraça")
+                    self.message_notification.config(text=self.board.message_game_status())
+                else:
+                    print("else do start match")
+                    game_state = self.board.game_status
+                    messagebox.showinfo(message=start_status.get_message())
+                    self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
+                    self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
+                    self.message_notification.config(text=self.board.message_game_status())
 
     def receive_start(self, start_status) -> None:
         print("Entrou no receive start")
@@ -210,13 +218,12 @@ class PlayerInterface(DogPlayerInterface):
         self.start_game()
         players = start_status.get_players()
         local_player_id = start_status.get_local_id()
+        self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
+        self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
         self.board.start_match(players, local_player_id)
         print(f"local_player_id: {local_player_id}")
 
         game_state = self.board.game_status
-
-        self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
-        self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
 
         print(game_state)
         self.update_gui(game_state)
@@ -232,7 +239,9 @@ class PlayerInterface(DogPlayerInterface):
         if match_status == 2 or match_status == 6:
             ##self.board.reset_game()
             ... # Definir o que acontece se FINISHED ou ABANDONED
-        self.update_gui(game_state)
+            self.update_gui(game_state)
+        else:
+            self.update_gui(game_state)
 
     def make_move(self, row: int, col: int) -> None:
         """Fazer a jogada. Ação quando se clica em uma peça habilitada"""
