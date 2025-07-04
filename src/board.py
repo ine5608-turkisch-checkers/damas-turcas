@@ -193,7 +193,7 @@ class Board:
         Atualiza os atributos dos jogadores existentes com os dados da Dog API.
         Define quem começa e retorna True se for o jogador local, False caso contrário.
         """
-        print("Entrou no start match no board")
+        print("Entrou no start match")
 
         player1_name = players[0][0]
         player1_id = players[0][1]
