@@ -199,9 +199,9 @@ class PlayerInterface(DogPlayerInterface):
                     self.update_gui(game_state)
 
                     #Permitir movimento inicial
-                    clickable_pieces = [(5, col) for col in range(8)] #3a Linha de baixo para cima 
-                    self.enable_clickable_pieces(clickable_pieces)
-        
+                    clickable_positions = [(5, col) for col in range(8)] #3a Linha de baixo para cima 
+                    self.enable_clickable_positions(clickable_positions)
+
         print(f"game_status: {game_state}")
 
     def receive_start(self, start_status) -> None:
@@ -215,14 +215,14 @@ class PlayerInterface(DogPlayerInterface):
 
         game_state = self.board.game_status
 
-        self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
-        self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
+        self.player1_label.config(text=f"Player 1: {self.board.player1.name}")
+        self.player2_label.config(text=f"Player 2: {self.board.player2.name}")
 
         print(game_state)
         self.update_gui(game_state)
 
         clickable_pieces = [(5, col) for col in range(8)] #3a Linha de baixo para cima 
-        self.enable_clickable_pieces(clickable_pieces)
+        self.enable_clickable_positions(clickable_pieces)
 
     def start_game(self) -> None:
         print("Entrou no start game")
@@ -264,19 +264,21 @@ class PlayerInterface(DogPlayerInterface):
             self.board.selected_position = position_at_clicked  # Guarda origem no modelo
             self.hightlight_selected_tile(row, col) # Marca tile escolhido
 
-            possible_moves = self.board.get_possible_moves(position_at_clicked)  # Positions válidas
-            possible_coords = [(pos.row, pos.col) for pos in possible_moves] # Tuplas válidas
-            print(f"Coordenadas possíveis para se mover:{possible_coords}")
-            if possible_coords: #Se lista de movimentos possíveis tem algo
-                self.board.game_status = 4
-                print(f"self.board.selected_position: {self.board.selected_position}")
-                self.enable_possible_destinations(possible_coords)
-##### Mudar enable_possible_positions para poder clicar em todas as peças, mas mandar erro se a 
-##### posição clicada for inválida
-            self.update_gui(game_status)
+            all_coords = [(row, col) for row in range(BOARD_SIZE) for col in range(BOARD_SIZE)]
+            self.enable_clickable_positions(all_coords)
+            self.board.game_status = 4
+
+            self.update_gui(game_status) ########################################################Talvez não precisa
 
         elif game_status == 4: # Ocurring local move
             origin = self.board.selected_position
+
+            possible_moves = self.board.get_possible_moves(origin)  # Positions válidas
+            #possible_coords = [(pos.row, pos.col) for pos in possible_moves] # Tuplas válidas
+            if position_at_clicked not in possible_moves:
+                messagebox.showinfo("Error", "Movimento inválido")
+                return
+
             if not origin:
                 print("Nenhuma peça selecionada.")
                 return
@@ -284,10 +286,10 @@ class PlayerInterface(DogPlayerInterface):
             destination = position_at_clicked
 
             self.board.move_piece(origin, destination) #Move a peça para posição selecionada
-            self.board.selected_position = None #Reseta posição anterior
-            self.board.game_status = 5 # Waiting remote move
+
 
             self.clear_selection_highlight()
+            self.clear_all_tile_binds()
             self.update_gui(game_status)
 
             self.board.switch_turn()
@@ -307,26 +309,21 @@ class PlayerInterface(DogPlayerInterface):
                     default_color = LIGHT_TILE_COLOR if (row + col) % 2 == 0 else DARK_TILE_COLOR
                     self.canvas.itemconfig(tile_id, fill=default_color)
 
-    def enable_clickable_pieces(self, clickable_pieces: List[Tuple[int, int]]) -> None:
-        """Habilita peças específicas para clique."""
+    def enable_clickable_positions(self, clickable_positions: List[Tuple[int, int]]) -> None:
+        """Habilita cliques nas peças e nos tiles dados."""
 
         self.clear_all_tile_binds()
-        for row, col in clickable_pieces:
-            canvas_id = self.pieces_id_by_position.get((row, col))
-            if canvas_id is None:
-                continue  # nenhuma peça desenhada nessa posição
-
-            self.canvas.tag_bind(canvas_id, "<Button-1>", lambda event, r=row, c=col: self.make_move(r, c))
-
-
-    def enable_possible_destinations(self, possible_destinations: List[Tuple[int, int]]) -> None:
-        """Habilita cliques nos tiles de destino válidos"""
-
-        self.clear_all_tile_binds()
-        for row,col in possible_destinations:
+        for row, col in clickable_positions:
+            # Tile (fundo)
             tile_id = self.all_positions[row][col]["rect_id"]
-            print(f"Tiles habilitados: {(row, col)}\n")
             self.canvas.tag_bind(tile_id, "<Button-1>", lambda event, r=row, c=col: self.make_move(r, c))
+
+            # Peça (se existir)
+            piece_id = self.pieces_id_by_position.get((row, col))
+            if piece_id is not None:
+                self.canvas.tag_bind(piece_id, "<Button-1>", lambda event, r=row, c=col: self.make_move(r, c))
+
+        print(f"Tiles habilitados: {clickable_positions}\n")
 
     def clear_all_tile_binds(self) -> None:
         """Remove todos os event bindings (<Button-1>) de todos os tiles do tabuleiro."""

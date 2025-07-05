@@ -21,7 +21,9 @@ class Board:
 
         self._game_status: int = GameStatus.NO_MATCH.value
         self._winner: Optional[Player] = None
-        self._selected_position: Optional[Position] = None
+        self._selected_position: Optional[Position] = None #Seria bom chamar de selected_origin, usado para o make e send move
+        self._selected_destinations: List[Position] = [] #Usado no send move
+        self._captured_pieces:List[Piece] = [] #Usado no send move
         self._received_move: Optional[dict] = None
         self.place_pieces_on_board()
         self.is_local_player: bool = False
@@ -68,6 +70,38 @@ class Board:
         if selected_position is not None and not isinstance(selected_position, Position):
             raise TypeError("Selected position must be a Position or None")
         self._selected_position = selected_position
+
+    @property
+    def selected_destinations(self) -> List[Position]:
+        return self._selected_destinations
+    
+    @selected_destinations.setter
+    def selected_destinations(self, value: List[Position]) -> None:
+        if not isinstance(value, list) or not all(isinstance(p, Position) for p in value):
+            raise TypeError("selected_destinations must be a list of Position objects")
+        self._selected_destinations = value
+
+    def add_selected_destination(self, selected_destination: Position) -> None:
+        print(f"selected_destination dentro do add: {selected_destination}")
+
+        if not isinstance(selected_destination, Position):
+            raise TypeError("Selected destination must be a Position")
+        self._selected_destinations.append(selected_destination)
+
+    @property
+    def captured_pieces(self) -> List[Piece]:
+        return self._captured_pieces
+
+    @captured_pieces.setter
+    def captured_pieces(self, value: List[Piece]) -> None:
+        if not isinstance(value, list) or not all(isinstance(p, Piece) for p in value):
+            raise TypeError("captured_pieces must be a list of Piece objects")
+        self._captured_pieces = value
+
+    def add_captured_piece(self, captured_piece: Piece) -> None:
+        if not isinstance(captured_piece, Piece):
+            raise TypeError("Captured piece must be a Piece")
+        self._captured_pieces.append(captured_piece)
 
     @property
     def received_move(self) -> Optional[dict]:
@@ -139,21 +173,51 @@ class Board:
         piece = self.piece_at(origin)
         if piece is None:
             raise ValueError("Sem peça na origem.")
-
+        
         origin.detach_piece()
         destination.piece = piece
         piece.position = destination
         #self.maybe_capture()
         self._maybe_promote(destination)
         self._evaluate_end_condition()
+
+        self.add_selected_destination(destination)
+        #self.add_captured_piece(captured_piece)
+
+        ##### A partir daqui só entra se não tiver peça para se capturar
         self.send_move()
+
+        self.selected_position = None #Reseta posição da peça que se moveu
+        self.selected_destinations = [] #Reseta destinos da peças que se moveram
+        self.captured_pieces = []
+        self.game_status = GameStatus.WAITING_REMOTE_MOVE.value # Waiting remote move
 
         #piece:Piece
         #destination:[Position]
         #captured
     
     def send_move(self):
-        ...
+        """Envia um dicionário ao dogActor com todas as informações da jogada"""
+
+        print("Entrou no send move")
+
+        piece = self.selected_position.piece
+        destinations = self.selected_destinations
+        captured_pieces = self.captured_pieces
+        winner = self.winner
+        game_status = self.game_status
+        mandatory_capturing_pieces = [] #Definir depois
+
+        send_move_dict = {
+            "piece": piece,
+            "destinations": destinations,
+            "captured_pieces": captured_pieces,
+            "winner": winner,
+            "game_status": game_status,
+            "mandatory_capturing_pieces": mandatory_capturing_pieces,
+        }
+
+        print(f"dicionário{send_move_dict}")
 
     def _maybe_promote(self, pos: Position) -> None:
         """Avalia se a peça deve ser promovida, e promove se necessário"""
