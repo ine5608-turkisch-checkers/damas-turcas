@@ -16,18 +16,8 @@ class Piece:
         return self._position
 
     @position.setter
-    def position(self, position):
-        if position is not None and not isinstance(position, Position):
-            raise TypeError("Position must be a Position instance")
-        
-        # Desvincula da posição anterior
-        if self._position is not None and self._position.piece is self:
-            self._position._piece = None
-
+    def position(self, position):       
         self._position = position
-
-        if position is not None and position.piece is not self:
-            position.piece = self
     
     def detach_position(self) -> None:
         """Desvincula peça da posição"""

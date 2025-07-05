@@ -141,17 +141,28 @@ class Board:
             raise ValueError("Sem peça na origem.")
 
         origin.detach_piece()
-        destination.piece = piece 
+        destination.piece = piece
+        piece.position = destination
+        #self.maybe_capture()
         self._maybe_promote(destination)
         self._evaluate_end_condition()
+        self.send_move()
 
-    # Felipe: Não acho que esse método esteja correto.
-    # A verificação não deveria ser local apenas?
+        #piece:Piece
+        #destination:[Position]
+        #captured
+    
+    def send_move(self):
+        ...
+
     def _maybe_promote(self, pos: Position) -> None:
+        """Avalia se a peça deve ser promovida, e promove se necessário"""
+
+        print("Entrou no maybe promote")
 
         piece = pos.piece
-        if piece and not piece.is_king:
-            if (piece.is_black and pos.row == 0) or (not piece.is_black and pos.row == BOARD_SIZE - 1):
+        if not piece.is_king: #Se a peça não for dama
+            if pos.row == 0:
                 piece.is_king = True
 
     # Felipe: Check winning condition apenas abrange vitória por inexistência de peças
@@ -190,7 +201,7 @@ class Board:
         if player1_order == "1":
             self.is_local_player = True
             self.player1.toggle_turn()
-            self.game_status = GameStatus.WAITING_LOCAL_MOVE.value 
+            self.game_status = GameStatus.WAITING_LOCAL_MOVE.value
         else:
             self.player2.toggle_turn()
             self.game_status = GameStatus.WAITING_REMOTE_MOVE.value

@@ -44,8 +44,6 @@ class Position:
 
     @piece.setter
     def piece(self, piece):
-        if piece is not None and not isinstance(piece, Piece):
-            raise TypeError("piece must be a Piece instance")
         self._piece = piece
 
     @property
