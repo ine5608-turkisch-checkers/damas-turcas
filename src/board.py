@@ -139,17 +139,21 @@ class Board:
         if piece is None:
             raise ValueError("Sem peça na origem.")
 
+        origin_to_send = {"row": origin.row, "col": origin.col}
+        destination_to_send = {"row": destination.row,"col": destination.col}
+
         origin.detach_piece()
         destination.piece = piece
         piece.position = destination
-        captured_piece = Position(0, 0) # Deletar isso
-        #captured_piece = self.maybe_capture()
+        captured_piece:Piece = None # Deletar isso
+        #captured_piece = self.maybe_capture(piece, destination)
         self._maybe_promote(destination)
         self._evaluate_end_condition()
 
-        origin_to_send = {"row": origin.row, "col": origin.col}
-        destination_to_send = {"row": destination.row,"col": destination.col}
-        captured_piece_to_send = {"row": captured_piece.row,"col": captured_piece.col}
+        if captured_piece is not None:
+            captured_piece_to_send = {"row": captured_piece.row,"col": captured_piece.col}
+        else:
+            captured_piece_to_send = None
 
         winner = self.winner
         game_status = self.game_status # mandamos para o send_move do dog, mas nem usaremos
@@ -174,6 +178,20 @@ class Board:
         if not piece.is_king: #Se a peça não for dama
             if pos.row == 0:
                 piece.is_king = True
+    
+    def maybe_capture(self, destination: Position) -> Optional[Position]:
+        '''Avalia captura de peça e captura se necessário e retorna posição
+        da peça capturada'''
+        
+        if destination.piece is not None:
+            if destination.piece is any(self.get_all_pieces()['player2']):
+                captured_piece = destination.piece
+                destination.piece.toggle_is_captured()
+                destination.piece = None
+                captured_piece.position = None
+                return captured_piece
+        else:
+            return None
 
     # Felipe: Check winning condition apenas abrange vitória por inexistência de peças
     # não capturadas por parte de um dos jogadores
@@ -225,6 +243,12 @@ class Board:
         print(f"player2_id: {self.player2.id}")
 
         ###################################
+    
+    def receive_move(self, a_move):
+        '''Recebe a jogada do dogActor'''
+
+        print("Entrou no receive_move")
+        print(f"a_move: {a_move}")
 
     def message_game_status(self) -> str:
         """Retorna mensagem referente ao estado do jogo"""
@@ -278,6 +302,40 @@ class Board:
                     moves.append(dest)
 
         return moves
+    
+    def verify_capture_as_man(self, selected_linha, selected_coluna, piece_selected_linha, piece_selected_coluna):
+        calculo_linha = selected_linha - piece_selected_linha
+        calculo_coluna = selected_coluna - piece_selected_coluna
+
+        cond1 = (
+            (calculo_linha == 0 and (calculo_coluna == 1 or calculo_coluna == -1)) or
+            (calculo_coluna == 0 and calculo_linha == 1)
+        )
+
+        if cond1:
+            return False
+
+        positions = self.positions
+
+        if calculo_linha == 0:
+            direcao = 1 if calculo_coluna > 0 else -1
+            captura = positions[selected_linha][selected_coluna + direcao].is_occupied
+        else:
+            direcao = 1 if calculo_linha > 0 else -1
+            captura = positions[piece_selected_linha + direcao][selected_coluna].is_occupied
+
+        if captura:
+            return True
+
+        captura = positions[piece_selected_linha][selected_coluna].is_occupied
+        if captura:
+            return True
+
+        captura = positions[selected_linha][selected_coluna].is_occupied
+        if captura:
+            return True
+
+        return False
 
     def switch_turn(self) -> None:
         self._player1.toggle_turn()
