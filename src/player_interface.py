@@ -31,31 +31,38 @@ class PlayerInterface(DogPlayerInterface):
         self.local_player_id = None
 
     def associate_canva(self):
+        """Recoloca as peças no tabuleiro e associa os eventos de clique."""
+
+        #self.all_pieces.clear()  # Limpa a lista de peças do canvas
+
         all_pieces_back = self.board.get_all_pieces()
-        linha = 0
         for owner, pieces in all_pieces_back.items():
-            is_local_owner = owner == self.board.player1
-            self.all_pieces.append([])
             for piece in pieces:
                 if piece.position is not None:
                     row = piece.position.row
                     col = piece.position.col
-
-                    # Inverte a posição se for jogador remoto
-                    if not is_local_owner:
-                        row = BOARD_SIZE - 1 - row
-                        col = BOARD_SIZE - 1 - col
+                    # Cores fixas: o jogador local vê suas peças como marrons
+                    fill_color = "#1C1C1C" if owner == 'player1' else "#8B5E3C"
 
                     x1 = col * TILE_SIZE + 10
                     y1 = row * TILE_SIZE + 10
                     x2 = x1 + TILE_SIZE - 20
                     y2 = y1 + TILE_SIZE - 20
 
-                    # Cores fixas: player1 é sempre marrom, player2 é sempre preto
-                    fill_color = "#8B5E3C" if owner == 'player1' else "#1C1C1C"
                     piece_canva = self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
-                    self.all_pieces[linha].append(piece_canva)
-            linha += 1
+
+                    self.all_pieces.append(piece_canva)
+
+                    # Associa o clique passando linha, coluna e id da peça
+                    self.canvas.tag_bind(
+                        piece_canva,
+                        "<Button-1>",
+                        lambda event, r=row, c=col, cid=piece_canva: self.make_move(r, c, cid)
+                    )
+
+        # Atualiza mensagem na interface, se houver
+        if self.message_notification is not None:
+            self.message_notification.config(text=self.board.message_game_status())
 
     def fill_main_window(self):
         # Configuração do título, tamanho e fundo da janela
@@ -119,10 +126,10 @@ class PlayerInterface(DogPlayerInterface):
         #self.menu_file.add_command(label="Restaurar estado inicial", command=self.start_game)
 
     def update_gui(self, game_state):
-        self.draw_board()
+        pass #não precisa desse metodo, mover e deletar pode ser feito pelo proprio canva
 
     def draw_board(self):
-        self.canvas.delete("all")
+        #self.canvas.delete("all")
         # Inicializa a matriz 8x8
 
         colors = ["#C8AD7F", "#5C3A21"]
@@ -149,9 +156,10 @@ class PlayerInterface(DogPlayerInterface):
         messagebox.showinfo("Reset", "Board has been reset.")
     
     def receive_move(self, a_move):
-        self.board.receive_move(a_move)
-        game_state = self.board.game_status
-        self.update_gui(game_state)
+        #self.board.receive_move(a_move)
+        #game_state = self.board.game_status
+        #self.update_gui(game_state)
+        pass
 
     def start_match(self):
         print("Entrou no start match")
@@ -164,30 +172,119 @@ class PlayerInterface(DogPlayerInterface):
                 message = start_status.get_message()
                 if code == "0" or code == "1":
                     messagebox.showinfo(message=message)
-                else:
+                elif code == 2:
                     players = start_status.get_players()
                     local_player_id = start_status.get_local_id()
 
-                    self.board.start_match(players, local_player_id)
+                    my_turn = self.board.start_match(players, local_player_id)
                     self.local_player_id = local_player_id
                     game_state = self.board.game_status
+                    messagebox.showinfo(message=start_status.get_message())
+                    self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
+                    self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
                     self.update_gui(game_state)
                     messagebox.showinfo(message=start_status.get_message())
+                    if my_turn:
+                        all_pieces_back = self.board.get_all_pieces()
+                        all_pieces_back = all_pieces_back["player1"]
+                        all_pieces_canva = self.all_pieces
+                        for i in range(8, 16):
+                            piece_back = all_pieces_back[i]
+                            row = piece_back.position.row
+                            col = piece_back.position.col
+                            piece_canva = all_pieces_canva[i]
+                            piece_canva.tag_bind(i, "<Button-1>",
+                                                 lambda event, r=row, c=col, cid=piece_canva: self.make_move(r, c, cid))
 
-    def receive_start(self, start_status):
+    def receive_start(self, start_status):#aqui se encontra o receive start match
         print("Entrou no receive start")
         self.start_game()
         players = start_status.get_players()
         local_player_id = start_status.get_local_id()
-        self.board.start_match(players, local_player_id)
+        my_turn = self.board.start_match(players, local_player_id)
         game_state = self.board.game_status
+        self.player1_label.config(text=f"Player 1 (Brown): {self.board.player1.name}")
+        self.player2_label.config(text=f"Player 2 (Black): {self.board.player2.name}")
+        if my_turn:
+            all_pieces_back = self.board.get_all_pieces()
+            all_pieces_back = all_pieces_back["player1"]
+            all_pieces_canva = self.all_pieces
+            for i in range(8, 16):
+                piece_back = all_pieces_back[i]
+                row = piece_back.position.row
+                col = piece_back.position.col
+                piece_canva = all_pieces_canva[i]
+                self.canvas.tag_bind(piece_canva, "<Button-1>", lambda event, r=row, c=col, cid=piece_canva: self.make_move(r, c, cid))
         self.update_gui(game_state)
 
     def start_game(self):
         print("Entrou no start game")
 
         match_status = self.board.game_status
+        game_state = self.board.game_status
         if match_status == 2 or match_status == 6:
             ##self.board.reset_game()
             game_state = self.board.game_status
-            self.update_gui(game_state)
+        self.update_gui(game_state)
+
+    def make_move(self, row: int, col: int, cid) -> None:
+        """Fazer a jogada. Ação quando se clica em uma peça habilitada"""
+        print(f"Entrou no make_move()")
+
+        game_status = self.board.game_status
+
+        if game_status == 5: # Waiting remote move
+            print(f"Aguarde a jogada do outro jogador")
+            return
+        for i in self.all_pieces:
+            if i != cid:
+                self.canvas.tag_unbind(i, "<Button-1>")
+
+        position_at_clicked = self.board.positions[row][col]
+
+        if game_status == 3: # Waiting local move
+            piece_at_clicked = position_at_clicked.piece
+
+            if piece_at_clicked is None:
+                print(f"Não existe peça nessa posição. Posição: ({row},{col})")
+                return
+
+            local_pieces = self.board.player1.pieces
+            if piece_at_clicked not in local_pieces:
+                print("Essa peça não é sua")
+                return
+
+            print(f"Peça na posição ({row}, {col}):", piece_at_clicked)
+
+            #self.clear_selection_highlight() # Retira marcações de tiles
+            self.board.selected_position = position_at_clicked  # Guarda origem no modelo
+            #self.hightlight_selected_tile(row, col) # Marca tile escolhido
+
+            possible_moves = self.board.get_possible_moves(position_at_clicked)  # Positions válidas
+            possible_coords = [(pos.row, pos.col) for pos in possible_moves] # Tuplas válidas
+            print(f"Coordenadas possíveis para se mover:{possible_coords}")
+            if possible_coords: #Se lista de movimentos possíveis tem algo
+                self.board.game_status = 4
+                print(f"self.board.selected_position: {self.board.selected_position}")
+                #self.enable_possible_destinations(possible_coords)
+
+        elif game_status == 4: # Ocurring local move
+            origin = self.board.selected_position
+            if not origin:
+                print("Nenhuma peça selecionada.")
+                return
+
+            destination = position_at_clicked
+
+            self.board.move_piece(origin, destination) #Move a peça para posição selecionada
+            self.board.selected_position = None #Reseta posição anterior
+            self.board.game_status = 5 # Waiting remote move
+
+            #self.clear_selection_highlight()
+            self.update_gui()
+
+    def receive_withdrawal_notification(self):
+        self.board.receive_withdrawal_notification()
+        game_state = self.board.match_status()
+        self.update_gui(game_state)
+        #self.board.switch_turn()
