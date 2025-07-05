@@ -8,6 +8,8 @@ from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
 from board import Board
 
+import json
+
 BOARD_SIZE = 8
 TILE_SIZE = 80
 ROOT_BG_COLOR = "#3B4A59"
@@ -261,7 +263,7 @@ class PlayerInterface(DogPlayerInterface):
             print(f"Peça na posição ({row}, {col}):", piece_at_clicked)
 
             self.clear_selection_highlight() # Retira marcações de tiles
-            self.board.selected_position = position_at_clicked  # Guarda origem no modelo
+            self.board.selected_origin = position_at_clicked  # Guarda origem no modelo
             self.hightlight_selected_tile(row, col) # Marca tile escolhido
 
             all_coords = [(row, col) for row in range(BOARD_SIZE) for col in range(BOARD_SIZE)]
@@ -271,7 +273,7 @@ class PlayerInterface(DogPlayerInterface):
             self.update_gui(game_status) ########################################################Talvez não precisa
 
         elif game_status == 4: # Ocurring local move
-            origin = self.board.selected_position
+            origin = self.board.selected_origin
 
             possible_moves = self.board.get_possible_moves(origin)  # Positions válidas
             #possible_coords = [(pos.row, pos.col) for pos in possible_moves] # Tuplas válidas
@@ -298,28 +300,13 @@ class PlayerInterface(DogPlayerInterface):
 
         print("Entrou no send move")
 
-        piece = self.board.selected_position.piece
-        destinations = self.board.selected_destinations
-        captured_pieces = self.board.captured_pieces
-        winner = self.board.winner
-        game_status = self.board.game_status
-        mandatory_capturing_pieces = [] #Definir depois
+        move_to_send = self.board.move_to_send
+        self.dog_server_interface.send_move(move_to_send)
 
-        send_move_dict = {
-            "piece": piece,
-            "destinations": destinations,
-            "captured_pieces": captured_pieces,
-            "winner": winner,
-            "game_status": game_status,
-            "mandatory_capturing_pieces": mandatory_capturing_pieces,
-        }
+        print(f"Dicionário enviado: {move_to_send}")
 
-        self.dog_server_interface.send_move(send_move_dict)
-        print(f"dicionário{send_move_dict}")
-        print("Dicionário enviado")
-
-        self.selected_position = None #Reseta posição da peça que se moveu
-        self.selected_destinations = [] #Reseta destinos da peças que se moveram
+        self.selected_origin = None #Reseta posição da peça que se moveu
+        self.selected_destination = None #Reseta destinos da peças que se moveram
         self.captured_pieces = []
 
     def hightlight_selected_tile(self, row, col):
@@ -356,7 +343,9 @@ class PlayerInterface(DogPlayerInterface):
     def clear_all_tile_binds(self) -> None:
         """Remove todos os event bindings (<Button-1>) de todos os tiles do tabuleiro."""
 
-        for row in range(BOARD_SIZE):
-            for col in range(BOARD_SIZE):
-                tile_id = self.all_positions[row][col]["rect_id"]
-                self.canvas.tag_unbind(tile_id, "<Button-1>")
+        self.canvas.tag_unbind("piece", "<Button-1>")
+
+        #for row in range(BOARD_SIZE):
+        #    for col in range(BOARD_SIZE):
+        #        tile_id = self.all_positions[row][col]["rect_id"]
+        #        self.canvas.tag_unbind(tile_id, "<Button-1>")

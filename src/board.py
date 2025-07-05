@@ -19,9 +19,8 @@ class Board:
 
         self._game_status: int = GameStatus.NO_MATCH.value
         self._winner: Optional[Player] = None
-        self._selected_position: Optional[Position] = None #Seria bom chamar de selected_origin, usado para o make e send move
-        self._selected_destinations: List[Position] = [] #Usado no send move
-        self._captured_pieces:List[Piece] = [] #Usado no send move
+        self._selected_origin: Optional[Position] = None #Seria bom chamar de selected_origin, usado para o make e send move
+        self._move_to_send: Optional[Dict] = None
         self._received_move: Optional[dict] = None
         self.place_pieces_on_board()
         self.is_local_player: bool = False
@@ -60,46 +59,14 @@ class Board:
         self._winner = winner
 
     @property
-    def selected_position(self) -> Optional[Position]:
-        return self._selected_position
+    def selected_origin(self) -> Optional[Position]:
+        return self._selected_origin
 
-    @selected_position.setter
-    def selected_position(self, selected_position: Optional[Position]) -> None:
-        if selected_position is not None and not isinstance(selected_position, Position):
+    @selected_origin.setter
+    def selected_origin(self, selected_origin: Optional[Position]) -> None:
+        if selected_origin is not None and not isinstance(selected_origin, Position):
             raise TypeError("Selected position must be a Position or None")
-        self._selected_position = selected_position
-
-    @property
-    def selected_destinations(self) -> List[Position]:
-        return self._selected_destinations
-    
-    @selected_destinations.setter
-    def selected_destinations(self, value: List[Position]) -> None:
-        if not isinstance(value, list) or not all(isinstance(p, Position) for p in value):
-            raise TypeError("selected_destinations must be a list of Position objects")
-        self._selected_destinations = value
-
-    def add_selected_destination(self, selected_destination: Position) -> None:
-        print(f"selected_destination dentro do add: {selected_destination}")
-
-        if not isinstance(selected_destination, Position):
-            raise TypeError("Selected destination must be a Position")
-        self._selected_destinations.append(selected_destination)
-
-    @property
-    def captured_pieces(self) -> List[Piece]:
-        return self._captured_pieces
-
-    @captured_pieces.setter
-    def captured_pieces(self, value: List[Piece]) -> None:
-        if not isinstance(value, list) or not all(isinstance(p, Piece) for p in value):
-            raise TypeError("captured_pieces must be a list of Piece objects")
-        self._captured_pieces = value
-
-    def add_captured_piece(self, captured_piece: Piece) -> None:
-        if not isinstance(captured_piece, Piece):
-            raise TypeError("Captured piece must be a Piece")
-        self._captured_pieces.append(captured_piece)
+        self._selected_origin = selected_origin
 
     @property
     def received_move(self) -> Optional[dict]:
@@ -171,15 +138,30 @@ class Board:
         piece = self.piece_at(origin)
         if piece is None:
             raise ValueError("Sem peça na origem.")
-        
+
         origin.detach_piece()
         destination.piece = piece
         piece.position = destination
-        #self.maybe_capture()
+        captured_piece = Position(0, 0) # Deletar isso
+        #captured_piece = self.maybe_capture()
         self._maybe_promote(destination)
         self._evaluate_end_condition()
-        self.add_selected_destination(destination)
-        #self.add_captured_piece(captured_piece)
+
+        origin_to_send = {"row": origin.row, "col": origin.col}
+        destination_to_send = {"row": destination.row,"col": destination.col}
+        captured_piece_to_send = {"row": captured_piece.row,"col": captured_piece.col}
+
+        winner = self.winner
+        game_status = self.game_status # mandamos para o send_move do dog, mas nem usaremos
+
+        self.move_to_send = {
+            "origin": origin_to_send,
+            "destination": destination_to_send,
+            "captured_pieces": captured_piece_to_send,
+            "winner": winner,
+            "game_status": game_status,
+            "match_status": 'next', # 'next', 'progress' ou 'finished'
+        }
 
         self.game_status = GameStatus.WAITING_REMOTE_MOVE.value # Waiting remote move
 
