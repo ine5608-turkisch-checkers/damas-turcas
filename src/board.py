@@ -4,8 +4,6 @@ from game_status import GameStatus
 from position import Position
 from piece import Piece
 
-import json
-
 BOARD_SIZE = 8
 
 class Board:
@@ -180,44 +178,10 @@ class Board:
         #self.maybe_capture()
         self._maybe_promote(destination)
         self._evaluate_end_condition()
-
         self.add_selected_destination(destination)
         #self.add_captured_piece(captured_piece)
 
-        ##### A partir daqui só entra se não tiver peça para se capturar
-        self.send_move()
-
-        self.selected_position = None #Reseta posição da peça que se moveu
-        self.selected_destinations = [] #Reseta destinos da peças que se moveram
-        self.captured_pieces = []
         self.game_status = GameStatus.WAITING_REMOTE_MOVE.value # Waiting remote move
-
-        #piece:Piece
-        #destination:[Position]
-        #captured
-    
-    def send_move(self):
-        """Envia um dicionário ao dogActor com todas as informações da jogada"""
-
-        print("Entrou no send move")
-
-        piece = self.selected_position.piece
-        destinations = self.selected_destinations
-        captured_pieces = self.captured_pieces
-        winner = self.winner
-        game_status = self.game_status
-        mandatory_capturing_pieces = [] #Definir depois
-
-        send_move_dict = {
-            "piece": piece,
-            "destinations": destinations,
-            "captured_pieces": captured_pieces,
-            "winner": winner,
-            "game_status": game_status,
-            "mandatory_capturing_pieces": mandatory_capturing_pieces,
-        }
-
-        print(f"dicionário{send_move_dict}")
 
     def _maybe_promote(self, pos: Position) -> None:
         """Avalia se a peça deve ser promovida, e promove se necessário"""

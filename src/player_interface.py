@@ -284,15 +284,43 @@ class PlayerInterface(DogPlayerInterface):
                 return
 
             destination = position_at_clicked
-
             self.board.move_piece(origin, destination) #Move a peça para posição selecionada
-
-
             self.clear_selection_highlight()
             self.clear_all_tile_binds()
+
+            self.send_move()
             self.update_gui(game_status)
 
             self.board.switch_turn()
+
+    def send_move(self):
+        """Envia um dicionário ao dogActor com todas as informações da jogada"""
+
+        print("Entrou no send move")
+
+        piece = self.board.selected_position.piece
+        destinations = self.board.selected_destinations
+        captured_pieces = self.board.captured_pieces
+        winner = self.board.winner
+        game_status = self.board.game_status
+        mandatory_capturing_pieces = [] #Definir depois
+
+        send_move_dict = {
+            "piece": piece,
+            "destinations": destinations,
+            "captured_pieces": captured_pieces,
+            "winner": winner,
+            "game_status": game_status,
+            "mandatory_capturing_pieces": mandatory_capturing_pieces,
+        }
+
+        self.dog_server_interface.send_move(send_move_dict)
+        print(f"dicionário{send_move_dict}")
+        print("Dicionário enviado")
+
+        self.selected_position = None #Reseta posição da peça que se moveu
+        self.selected_destinations = [] #Reseta destinos da peças que se moveram
+        self.captured_pieces = []
 
     def hightlight_selected_tile(self, row, col):
         tile_id = self.all_positions[row][col]["rect_id"]
