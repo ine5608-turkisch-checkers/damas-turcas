@@ -133,6 +133,13 @@ class Board:
                 self._player2.associate_piece_position(position, num_piece)
                 num_piece += 1
 
+    def reset_game(self):
+        """Reseta tudo do jogo"""
+
+        print("Definir reset game de acordo com o diagrama")
+
+        return
+
     def detach_piece_at(self, pos: Position) -> None:
         """Desassocia a peça de uma dada posição"""
 
@@ -161,6 +168,7 @@ class Board:
         if captured_piece is not None:
             self.add_captured_piece_on_this_turn(captured_piece)
             if self.verify_multiple_capture():
+                print("verify_multiply_capture deu True")
                 return
 
         self._maybe_promote(destination)
@@ -192,12 +200,9 @@ class Board:
     def _maybe_promote(self, pos: Position) -> None:
         """Avalia se a peça deve ser promovida, e promove se necessário"""
 
-        print("Entrou no maybe promote")
-
         piece = pos.piece
-        if not piece.is_king: #Se a peça não for dama
-            if pos.row == 0:
-                piece.is_king = True
+        if pos.row == 0:
+            piece.promote_piece()
     
     def maybe_capture(self, origin: Position, destination: Position) -> Optional[Piece]:
         """Se a jogada foi uma captura (movimento de 2 casas), remove a peça inimiga intermediária e retorna ela."""
@@ -276,7 +281,7 @@ class Board:
         """Recebe a jogada do adversário e atualiza o tabuleiro."""
 
         print("Entrou no receive_move")
-        print(f"a_move: {a_move}")
+        print(f"a_move no receive move: {a_move}")
 
         # Armazena o movimento
         self._received_move = a_move
@@ -297,13 +302,19 @@ class Board:
 
         # Move a peça
         origin_data = a_move["origin"]
+        print(f"origin_data: {origin_data}")
         dest_data = a_move["destination"]
         origin = self._positions[origin_data["row"]][origin_data["col"]]
+        print(f"origin: {origin}")
+        print(f"origin row e col: {origin.row} e {origin.col}")
+        print(f"origem recebida no receive move {origin}")
         destination = self._positions[dest_data["row"]][dest_data["col"]]
 
         piece = origin.piece
+        print(f"piece recebida no receive move {piece}")
         origin.detach_piece()
         destination.piece = piece
+        print(f"piece 2 recebida no receive move {piece}")
         piece.position = destination
 
         # 6. Atualiza status e muda o turno de ambos jogadores
@@ -353,7 +364,6 @@ class Board:
                 return f"Partida abandonada."
     def get_possible_moves(self, origin: Position) -> List[Position]:
         """Retorna as posições de destino possíveis para uma dada peça, considerando capturas e tipo (peão ou dama)."""
-        print("Entrou no board.get_possible_moves")
 
         piece = origin.piece
         if not piece:
@@ -391,7 +401,7 @@ class Board:
                             moves.append(landing_pos)
 
         return moves
-    
+
     def get_possible_moves_as_king(self, origin: Position) -> List[Position]:
         """Retorna as posições de destino possíveis para uma dada dama"""
 
@@ -429,19 +439,24 @@ class Board:
                 c += dc
 
         return moves
-    
+
     def verify_multiple_capture(self) -> bool:
         """Verifica se alguma peça do jogador local deve realizar uma captura."""
 
+        print(f"Entrou no verify multiple capture")
+
         for piece in self.player1.pieces:  # Só o jogador local
             if piece.is_captured or piece.position is None:
+                print("1o print")
                 continue
 
             if piece.is_king:
                 if self.verify_capture_as_king(piece):
+                    print("2o print")
                     return True
             else:
                 if self.verify_capture_as_man(piece):
+                    print("3o print")
                     return True
 
         return False

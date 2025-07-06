@@ -16,9 +16,9 @@ class Piece:
         return self._position
 
     @position.setter
-    def position(self, position):       
+    def position(self, position):    
         self._position = position
-    
+
     def detach_position(self) -> None:
         """Desvincula peça da posição"""
 
@@ -34,9 +34,7 @@ class Piece:
     def promote_piece(self) -> None:
         """Promove a peça se ainda não foi promovida"""
 
-        if self._is_king:
-            raise PromotionError("Error: Piece is already a king.")
-        else:
+        if not self._is_king :
             self._is_king = True
     
     @property

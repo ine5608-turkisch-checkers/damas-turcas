@@ -232,8 +232,7 @@ class PlayerInterface(DogPlayerInterface):
         match_status = self.board.game_status
         game_status = self.board.game_status
         if match_status == 2 or match_status == 6:
-            ##self.board.reset_game()
-            ... # Definir o que acontece se FINISHED ou ABANDONED
+            self.board.reset_game()  # Definir o que acontece se FINISHED ou ABANDONED
         self.update_gui(match_status)
 
     def make_move(self, row: int, col: int) -> None:
@@ -290,10 +289,14 @@ class PlayerInterface(DogPlayerInterface):
             self.clear_selection_highlight()
             self.clear_all_tile_binds()
 
-            self.send_move()
+            if self.board.game_status == 4:
+                self.board.selected_origin = destination
+                self.hightlight_selected_tile(destination.row, destination.col) # Marca tile escolhido
+            if self.board.game_status == 5:
+                self.send_move()
+                self.board.switch_turn()
+            
             self.update_gui(game_status)
-
-            self.board.switch_turn()
 
     def send_move(self):
         """Envia um dicionário ao dogActor com todas as informações da jogada"""
