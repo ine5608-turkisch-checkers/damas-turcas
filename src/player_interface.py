@@ -306,8 +306,24 @@ class PlayerInterface(DogPlayerInterface):
         print(f"Dicionário enviado: {move_to_send}")
 
         self.selected_origin = None #Reseta posição da peça que se moveu
-        self.selected_destination = None #Reseta destinos da peças que se moveram
+        self._captured_pieces_on_this_turn = [] #Reseta peças que foram capturadas
         self.captured_pieces = []
+    
+    def receive_move(self, a_move):
+        print("Entrou no receive mode da interface")
+        self.board.receive_move(a_move)
+        mandatory_pieces = self.board.check_mandatory_capture_pieces()
+        if not mandatory_pieces:
+            # Nenhuma captura obrigatória, permite qualquer peça que pode se mover
+            clickable_positions = self.board.get_moveable_pieces()
+            clickable_coords = [(p.position.row, p.position.col) for p in clickable_positions if p.position]
+        else:
+            # Capturas obrigatórias: permite somente elas
+            # Interface pode notificar: "Você deve capturar"
+            clickable_coords = [(p.position.row, p.position.col) for p in mandatory_pieces if p.position]
+        self.enable_clickable_positions(clickable_coords)
+        game_status = self.board.game_status
+        self.update_gui(game_status)
 
     def hightlight_selected_tile(self, row, col):
         tile_id = self.all_positions[row][col]["rect_id"]

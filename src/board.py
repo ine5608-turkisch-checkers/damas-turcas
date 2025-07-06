@@ -272,11 +272,62 @@ class Board:
 
         ###################################
     
-    def receive_move(self, a_move):
-        '''Recebe a jogada do dogActor'''
+    def receive_move(self, a_move: dict) -> None:
+        """Recebe a jogada do adversário e atualiza o tabuleiro."""
 
         print("Entrou no receive_move")
         print(f"a_move: {a_move}")
+
+        # Armazena o movimento
+        self._received_move = a_move
+
+        # Verifica vitória
+        if a_move["winner"] is not None:
+            self._winner = self.player1 if a_move["winner"] == self.player1.id else self.player2
+            self._game_status = GameStatus.FINISHED.value
+            return  # A interface vai cuidar da notificação e encerramento
+
+        # Remove peças capturadas do adversário
+        for captured in a_move["captured_pieces"]:
+            row, col = captured["row"], captured["col"]
+            pos = self._positions[row][col]
+            if pos.piece:
+                pos.piece.toggle_is_captured()
+                pos.piece = None
+
+        # Move a peça
+        origin_data = a_move["origin"]
+        dest_data = a_move["destination"]
+        origin = self._positions[origin_data["row"]][origin_data["col"]]
+        destination = self._positions[dest_data["row"]][dest_data["col"]]
+
+        piece = origin.piece
+        origin.detach_piece()
+        destination.piece = piece
+        piece.position = destination
+
+        # 6. Atualiza status e muda o turno de ambos jogadores
+        self._game_status = GameStatus.WAITING_LOCAL_MOVE.value
+        self.switch_turn()
+    
+    def check_mandatory_capture_pieces(self) -> List[Piece]:
+        """Retorna todas as peças do jogador local (player1) que podem capturar."""
+
+        mandatory_pieces = []
+
+        for piece in self.player1.pieces:
+            if piece.is_captured or piece.position is None:
+                continue
+
+            if piece.is_king:
+                if self.verify_capture_as_king(piece):
+                    mandatory_pieces.append(piece)
+            else:
+                if self.verify_capture_as_man(piece):
+                    mandatory_pieces.append(piece)
+
+        return mandatory_pieces
+        
 
     def message_game_status(self) -> str:
         """Retorna mensagem referente ao estado do jogo"""
@@ -449,6 +500,24 @@ class Board:
                 c += d_col
 
         return False
+
+    # Equivalente ao verificar peças que podem se mover, acho eu
+    def get_moveable_pieces(self) -> List[Piece]:
+        """Retorna todas as peças do jogador local (player1) que podem se mover."""
+
+        moveable_pieces = []
+
+        for piece in self.player1.pieces:
+            if piece.is_captured or piece.position is None:
+                continue
+
+            origin = piece.position
+            possible_moves = self.get_possible_moves(origin)
+
+            if possible_moves:  # Se tiver qualquer destino possível
+                moveable_pieces.append(piece)
+
+        return moveable_pieces
 
     def switch_turn(self) -> None:
         self._player1.toggle_turn()
