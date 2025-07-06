@@ -207,7 +207,7 @@ class Board:
         piece.position = destination
 
         # Se não há mais capturas, monta move_to_send
-        self._maybe_promote(destination)
+        was_promoted = self._maybe_promote(destination)
         if self._evaluate_end_condition():
             self.game_status = GameStatus.FINISHED.value
 
@@ -225,6 +225,7 @@ class Board:
             "origin": origin_to_send,
             "destination": destination_to_send,
             "captured_pieces": captured_pieces_data,
+            "promoted": was_promoted,
             "winner": winner,
             "game_status": game_status,
             "match_status": 'next',
@@ -232,13 +233,15 @@ class Board:
 
         self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
 
-    def _maybe_promote(self, pos: Position) -> None:
+    def _maybe_promote(self, pos: Position) -> bool:
         """Avalia se a peça deve ser promovida, e promove se necessário"""
 
         piece = pos.piece
-        if pos.row == 0:
+        if not piece.is_king and pos.row == 0:
             piece.promote_piece()
-    
+            return True
+        return False
+
     def maybe_capture(self, piece: Piece, origin: Position, destination: Position) -> Optional[Piece]:
         if piece.is_king:
             return self.capture_as_king(origin, destination)
@@ -419,6 +422,8 @@ class Board:
         destination.piece = piece
         print(f"piece 2 recebida no receive move {piece}")
         piece.position = destination
+        if a_move.get("promoted"):
+            piece.promote_piece()
 
         # 6. Atualiza status e muda o turno de ambos jogadores
         self._game_status = GameStatus.WAITING_LOCAL_MOVE.value
