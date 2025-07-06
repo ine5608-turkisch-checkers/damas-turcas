@@ -219,19 +219,19 @@ class Board:
                 "col": coords["col"]
             })
 
-        winner = self.winner
+        winner_name = self._winner.name if self._winner else None
         game_status = self.game_status
         self.move_to_send = {
             "origin": origin_to_send,
             "destination": destination_to_send,
             "captured_pieces": captured_pieces_data,
             "promoted": was_promoted,
-            "winner": winner,
+            "winner": winner_name,
             "game_status": game_status,
             "match_status": 'next',
         }
-
-        self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
+        if self.game_status != GameStatus.FINISHED.value:
+            self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
 
     def _maybe_promote(self, pos: Position) -> bool:
         """Avalia se a peça deve ser promovida, e promove se necessário"""
@@ -311,7 +311,7 @@ class Board:
 
         return None    
 
-    def _evaluate_end_condition(self) -> None:
+    def _evaluate_end_condition(self) -> bool:
         """Checa condições de vitória do jogo"""
 
         alive1 = any(not p.is_captured for p in self.player_pieces(self.player1))
@@ -320,9 +320,13 @@ class Board:
         if not alive1:
             self._winner = self._player2
             self._game_status = GameStatus.FINISHED.value
+            return True
         elif not alive2:
             self._winner = self._player1
             self._game_status = GameStatus.FINISHED.value
+            return True
+        
+        return False
 
     def start_match(self, players: str, local_player_id: str) -> bool:
         """
@@ -393,7 +397,10 @@ class Board:
 
         # Verifica vitória
         if a_move["winner"] is not None:
-            self._winner = self.player1 if a_move["winner"] == self.player1.id else self.player2
+            if a_move["winner"] == self.player1.name:
+                self._winner = self.player1
+            elif a_move["winner"] == self.player2.name:
+                self._winner = self.player2
             self._game_status = GameStatus.FINISHED.value
             return  # A interface vai cuidar da notificação e encerramento
 

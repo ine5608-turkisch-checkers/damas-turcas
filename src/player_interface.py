@@ -255,7 +255,7 @@ class PlayerInterface(DogPlayerInterface):
         game_status = self.board.game_status
 
         if game_status == 5: # Waiting remote move
-            print(f"Aguarde a jogada do outro jogador")
+            
             return
 
         position_at_clicked = self.board.positions[row][col]
