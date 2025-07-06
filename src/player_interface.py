@@ -271,6 +271,11 @@ class PlayerInterface(DogPlayerInterface):
             if piece_at_clicked not in local_pieces:
                 print("Essa peça não é sua")
                 return
+            
+            mandatory_pieces = self.board.check_mandatory_capture_pieces()
+            if mandatory_pieces and piece_at_clicked not in mandatory_pieces:
+                messagebox.showinfo("Atenção", "Você deve capturar uma peça.")
+                return
 
             print(f"Peça na posição ({row}, {col}):", piece_at_clicked)
 
