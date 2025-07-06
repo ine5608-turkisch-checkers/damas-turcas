@@ -150,8 +150,8 @@ class Board:
         if piece is None:
             raise ValueError("Sem peça na origem.")
 
-        origin_to_send = {"row": origin.row, "col": origin.col}
-        destination_to_send = {"row": destination.row,"col": destination.col}
+        origin_to_send = {"row": 7- origin.row, "col": 7 - origin.col}
+        destination_to_send = {"row": 7 - destination.row,"col": 7 - destination.col}
 
         origin.detach_piece()
         destination.piece = piece
@@ -171,8 +171,8 @@ class Board:
         for piece in self.captured_pieces_on_this_turn:
             if piece.position:
                 captured_pieces_data.append({
-                    "row": piece.position.row,
-                    "col": piece.position.col
+                    "row": 7 - piece.position.row,
+                    "col": 7 - piece.position.col
                 })
 
         winner = self.winner
