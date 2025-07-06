@@ -62,7 +62,7 @@ class Board:
 
     @property
     def first_selected_origin(self) -> Optional[Position]:
-        return self._current_selected_origin
+        return self._first_selected_origin
 
     @first_selected_origin.setter
     def first_selected_origin(self, first_selected_origin: Optional[Position]) -> None:
@@ -168,7 +168,7 @@ class Board:
 
     def move_piece(self, current_origin: Position, destination: Position) -> None:
         """Move peça de uma posição de origem à uma posição de destino.
-        Promove se necessário e checa condição de término de jogo"""
+        Promove se necessário e checa condição de término de jogo."""
 
         print("Entrou em move_piece")
         print(f"origin: {current_origin} e current_origin.row e col ({current_origin.row}, {current_origin.col})")
@@ -179,17 +179,17 @@ class Board:
             raise ValueError("Sem peça na origem.")
 
         first_origin = self.first_selected_origin
-        origin_to_send = {"row": 7 - first_origin.row, "col": 7 - first_origin.col}
-        destination_to_send = {"row": 7 - destination.row, "col": 7 - destination.col}
+        origin_to_send = {"row": first_origin.row, "col": first_origin.col}
+        destination_to_send = {"row": destination.row, "col": destination.col}
 
         # Movimento local
         current_origin.detach_piece()
         destination.piece = piece
         piece.position = destination
 
-        # Verifica se há captura e captura se necessário
-        captured_piece = self.maybe_capture(current_origin, destination)
-        if captured_piece is not None:
+        # Verifica se há captura e registra se necessário
+        captured_coords = self.maybe_capture(current_origin, destination)
+        if captured_coords is not None:
             print(f"Achou uma peça para se capturar.")
             print(f"Lista de peças capturadas: {self.captured_pieces_on_this_turn}")
 
@@ -198,21 +198,21 @@ class Board:
                 print("verify_multiple_capture deu True. Player deve capturar outra peça")
                 self.current_selected_origin = destination
                 self.game_status = GameStatus.OCCURRING_LOCAL_MOVE.value
-                return  # Sai do método sem montar move_to_send
+                return  # ← sai do método sem montar move_to_send
 
-        print(f"Acabando a jogada")
-        # Se não há mais capturas, monta o move_to_send normalmente
+        # Se não há mais capturas, monta move_to_send
         self._maybe_promote(destination)
         if self._evaluate_end_condition():
             self.game_status = GameStatus.FINISHED.value
 
         # Monta captured_pieces_data
-        captured_pieces_data = [
-            {"row": 7 - captured["row"], "col": 7 - captured["col"]}
-            for captured in self.captured_pieces_on_this_turn
-            ]
+        captured_pieces_data = []
+        for coords in self.captured_pieces_on_this_turn:
+            captured_pieces_data.append({
+                "row": coords["row"],
+                "col": coords["col"]
+            })
 
-        # Prepara dicionário final
         winner = self.winner
         game_status = self.game_status
         self.move_to_send = {
@@ -224,7 +224,6 @@ class Board:
             "match_status": 'next',
         }
 
-        # Turno agora é do adversário
         self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
 
     def _maybe_promote(self, pos: Position) -> None:
@@ -318,6 +317,28 @@ class Board:
 
         # Armazena o movimento
         self._received_move = a_move
+        
+        print("----- [RECEIVE MOVE DEBUG] -----")
+        origin_row = 7 - a_move["origin"]["row"]
+        origin_col = 7 -a_move["origin"]["col"]
+        dest_row = 7 - a_move["destination"]["row"]
+        dest_col = 7 - a_move["destination"]["col"]
+
+        origin_pos = self.positions[origin_row][origin_col]
+        dest_pos = self.positions[dest_row][dest_col]
+
+        origin_piece = origin_pos.piece
+        dest_piece = dest_pos.piece
+
+        all_pieces = self.get_all_pieces()
+        owner_origin = 'player1' if origin_piece in all_pieces['player1'] else 'player2' if origin_piece in all_pieces['player2'] else 'None'
+        owner_dest = 'player1' if dest_piece in all_pieces['player1'] else 'player2' if dest_piece in all_pieces['player2'] else 'None'
+
+        print(f"Origem recebida: ({origin_row}, {origin_col}) -> Peça: {origin_piece} (Owner: {owner_origin})")
+        print(f"Destino recebido: ({dest_row}, {dest_col}) -> Peça: {dest_piece} (Owner: {owner_dest})")
+
+        print("--------------------------------")
+
 
         # Verifica vitória
         if a_move["winner"] is not None:
@@ -327,21 +348,22 @@ class Board:
 
         # Remove peças capturadas do adversário
         for captured in a_move["captured_pieces"]:
-            row, col = captured["row"], captured["col"]
+            row, col = 7- captured["row"], 7 - captured["col"]
             pos = self._positions[row][col]
             if pos.piece:
                 pos.piece.toggle_is_captured()
-                pos.piece = None
+                pos.piece.position = None  # ← remove o vínculo na própria peça
+                pos.piece = None           # ← remove o vínculo na posição
 
         # Move a peça
         origin_data = a_move["origin"]
         print(f"origin_data: {origin_data}")
         dest_data = a_move["destination"]
-        origin = self._positions[origin_data["row"]][origin_data["col"]]
+        origin = self._positions[7 - origin_data["row"]][7 -origin_data["col"]]
         print(f"origin: {origin}")
         print(f"origin row e col: {origin.row} e {origin.col}")
         print(f"origem recebida no receive move {origin}")
-        destination = self._positions[dest_data["row"]][dest_data["col"]]
+        destination = self._positions[7 - dest_data["row"]][7 - dest_data["col"]]
 
         piece = origin.piece
         print(f"piece recebida no receive move {piece}")

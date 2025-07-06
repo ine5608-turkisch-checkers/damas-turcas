@@ -304,6 +304,28 @@ class PlayerInterface(DogPlayerInterface):
         print("Entrou no send move")
 
         move_to_send = self.board.move_to_send
+
+        print("----- [SEND MOVE DEBUG] -----")
+        origin_row = move_to_send["origin"]["row"]
+        origin_col = move_to_send["origin"]["col"]
+        dest_row = move_to_send["destination"]["row"]
+        dest_col = move_to_send["destination"]["col"]
+
+        origin_pos = self.board.positions[origin_row][origin_col]
+        dest_pos = self.board.positions[dest_row][dest_col]
+
+        origin_piece = origin_pos.piece
+        dest_piece = dest_pos.piece
+
+        all_pieces = self.board.get_all_pieces()
+        owner_origin = 'player1' if origin_piece in all_pieces['player1'] else 'player2' if origin_piece in all_pieces['player2'] else 'None'
+        owner_dest = 'player1' if dest_piece in all_pieces['player1'] else 'player2' if dest_piece in all_pieces['player2'] else 'None'
+
+        print(f"Peça na ORIGEM ({origin_row}, {origin_col}): {origin_piece} (Owner: {owner_origin})")
+        print(f"Peça no DESTINO ({dest_row}, {dest_col}): {dest_piece} (Owner: {owner_dest})")
+
+        print("--------------------------------")
+
         self.dog_server_interface.send_move(move_to_send)
         print(f"Dicionário enviado: {move_to_send}")
 
