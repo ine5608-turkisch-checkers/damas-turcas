@@ -18,7 +18,7 @@ class Board:
         ] # pode ser usado com o self._positions[2][3] ex
 
         self._game_status: int = GameStatus.NO_MATCH.value
-        self._winner: Optional[Player] = None
+        self._winner: Optional[str] = None
         self._first_selected_origin: Optional[Position] = None # Local onde a peça escolhida estava no início da jogada
         self._current_selected_origin: Optional[Position] = None # Usado para múltiplas capturas, acompanha a peça
         self._captured_pieces_on_this_turn: List[Dict[str, int]] = [] # Peças capturadas nesse turno
@@ -51,13 +51,13 @@ class Board:
             raise ValueError(f"Invalid game status: {status}")
 
     @property
-    def winner(self) -> Optional[Player]:
+    def winner(self) -> Optional[str]:
         return self._winner
 
     @winner.setter
-    def winner(self, winner: Optional[Player]) -> None:
-        if winner is not None and not isinstance(winner, Player):
-            raise TypeError("Winner must be a Player or None")
+    def winner(self, winner: Optional[str]) -> None:
+        if winner is not None and not isinstance(winner, str):
+            raise TypeError("Winner must be a string or None")
         self._winner = winner
 
     @property
@@ -184,6 +184,11 @@ class Board:
         origin_to_send = {"row": first_origin.row, "col": first_origin.col}
         destination_to_send = {"row": destination.row, "col": destination.col}
 
+        # Movimento local (sem captura ou fim da sequência de capturas)
+        current_origin.detach_piece()
+        destination.piece = piece
+        piece.position = destination
+
         # Verifica se há captura e registra se necessário
         captured_coords = self.maybe_capture(piece, current_origin, destination)
         if captured_coords is not None:
@@ -201,11 +206,6 @@ class Board:
                 self.game_status = GameStatus.OCCURRING_LOCAL_MOVE.value
                 return
 
-        # Movimento local (sem captura ou fim da sequência de capturas)
-        current_origin.detach_piece()
-        destination.piece = piece
-        piece.position = destination
-
         # Se não há mais capturas, monta move_to_send
         was_promoted = self._maybe_promote(destination)
         if self._evaluate_end_condition():
@@ -220,6 +220,7 @@ class Board:
             })
 
         winner_name = self._winner.name if self._winner else None
+        print(f"winner no move_piece: {winner_name}")
         game_status = self.game_status
         self.move_to_send = {
             "origin": origin_to_send,
@@ -230,6 +231,7 @@ class Board:
             "game_status": game_status,
             "match_status": 'next',
         }
+        print(f"dicionário no move piece {self.move_to_send}")
         if self.game_status != GameStatus.FINISHED.value:
             self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
 
@@ -372,6 +374,7 @@ class Board:
 
         # Armazena o movimento
         self._received_move = a_move
+        print(f"dicionário no receive move {a_move}")
         
         print("----- [RECEIVE MOVE DEBUG] -----")
         origin_row = 7 - a_move["origin"]["row"]

@@ -368,7 +368,7 @@ class PlayerInterface(DogPlayerInterface):
 
         # ATUALIZA GUI antes de qualquer bind
         game_status = self.board.game_status
-        self.update_gui(game_status)  # ← Isso redesenha tudo, inclusive pieces_id_by_position
+        self.update_gui(game_status)  # Isso redesenha tudo, inclusive pieces_id_by_position
 
         # Verifica peças que podem capturar
         mandatory_pieces = self.board.check_mandatory_capture_pieces()
