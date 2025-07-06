@@ -19,8 +19,9 @@ class Board:
 
         self._game_status: int = GameStatus.NO_MATCH.value
         self._winner: Optional[Player] = None
-        self._selected_origin: Optional[Position] = None #Seria bom chamar de selected_origin, usado para o make e send move
-        self._captured_pieces_on_this_turn = []
+        self._first_selected_origin: Optional[Position] = None # Local onde a peça escolhida estava no início da jogada
+        self._current_selected_origin: Optional[Position] = None # Usado para múltiplas capturas, acompanha a peça
+        self._captured_pieces_on_this_turn: List[Dict[str, int]] = [] # Peças capturadas nesse turno
         self._move_to_send: Optional[Dict] = None
         self._received_move: Optional[dict] = None
         self.place_pieces_on_board()
@@ -60,24 +61,44 @@ class Board:
         self._winner = winner
 
     @property
-    def selected_origin(self) -> Optional[Position]:
-        return self._selected_origin
+    def first_selected_origin(self) -> Optional[Position]:
+        return self._current_selected_origin
 
-    @selected_origin.setter
-    def selected_origin(self, selected_origin: Optional[Position]) -> None:
-        if selected_origin is not None and not isinstance(selected_origin, Position):
-            raise TypeError("Selected position must be a Position or None")
-        self._selected_origin = selected_origin
+    @first_selected_origin.setter
+    def first_selected_origin(self, first_selected_origin: Optional[Position]) -> None:
+        if first_selected_origin is not None and not isinstance(first_selected_origin, Position):
+            raise TypeError("First selected origin must be a Position or None")
+        self._first_selected_origin = first_selected_origin
 
     @property
-    def captured_pieces_on_this_turn(self) -> List[Piece]:
+    def current_selected_origin(self) -> Optional[Position]:
+        return self._current_selected_origin
+
+    @current_selected_origin.setter
+    def current_selected_origin(self, current_selected_origin: Optional[Position]) -> None:
+        if current_selected_origin is not None and not isinstance(current_selected_origin, Position):
+            raise TypeError("Current selected origin must be a Position or None")
+        self._current_selected_origin = current_selected_origin
+
+    @property
+    def captured_pieces_on_this_turn(self) -> List[Dict[str, int]]:
         return self._captured_pieces_on_this_turn
     
-    def add_captured_piece_on_this_turn(self, piece: Piece) -> None:
-        self._captured_pieces_on_this_turn.append(piece)
+    def add_captured_piece_on_this_turn(self, row: int, col: int) -> None:
+        self._captured_pieces_on_this_turn.append({"row": row, "col": col})
     
     def clear_captured_pieces_on_this_turn(self) -> None:
-        self._captured_pieces_on_this_turn.clear()
+        self._captured_pieces_on_this_turn = []
+
+    @property
+    def move_to_send(self) -> Optional[Dict]:
+        return self._move_to_send
+
+    @move_to_send.setter
+    def move_to_send(self, move: Optional[Dict]) -> None:
+        if move is not None and not isinstance(move, dict):
+            raise TypeError("move_to_send must be a dictionary or None")
+        self._move_to_send = move
 
     @property
     def received_move(self) -> Optional[dict]:
@@ -145,57 +166,66 @@ class Board:
 
         self._positions[pos.row][pos.col].detach_piece()
 
-    def move_piece(self, origin: Position, destination: Position) -> None:
+    def move_piece(self, current_origin: Position, destination: Position) -> None:
         """Move peça de uma posição de origem à uma posição de destino.
         Promove se necessário e checa condição de término de jogo"""
 
         print("Entrou em move_piece")
-        print(f"origin: {origin} e origin.row e col ({origin.row}, {origin.col})")
-        print(f"destination: {origin} e destination.row e col ({destination.row}, {destination.col})")
+        print(f"origin: {current_origin} e current_origin.row e col ({current_origin.row}, {current_origin.col})")
+        print(f"destination: {destination} e destination.row e col ({destination.row}, {destination.col})")
 
-        piece = self.piece_at(origin)
+        piece = self.piece_at(current_origin)
         if piece is None:
             raise ValueError("Sem peça na origem.")
 
-        origin_to_send = {"row": 7- origin.row, "col": 7 - origin.col}
-        destination_to_send = {"row": 7 - destination.row,"col": 7 - destination.col}
+        first_origin = self.first_selected_origin
+        origin_to_send = {"row": 7 - first_origin.row, "col": 7 - first_origin.col}
+        destination_to_send = {"row": 7 - destination.row, "col": 7 - destination.col}
 
-        origin.detach_piece()
+        # Movimento local
+        current_origin.detach_piece()
         destination.piece = piece
         piece.position = destination
 
-        captured_piece = self.maybe_capture(origin, destination)
+        # Verifica se há captura e captura se necessário
+        captured_piece = self.maybe_capture(current_origin, destination)
         if captured_piece is not None:
-            self.add_captured_piece_on_this_turn(captured_piece)
-            if self.verify_multiple_capture():
-                print("verify_multiply_capture deu True")
-                return
+            print(f"Achou uma peça para se capturar.")
+            print(f"Lista de peças capturadas: {self.captured_pieces_on_this_turn}")
 
+            # Se ainda há múltiplas capturas, NÃO cria move_to_send ainda
+            if self.verify_multiple_capture():
+                print("verify_multiple_capture deu True. Player deve capturar outra peça")
+                self.current_selected_origin = destination
+                self.game_status = GameStatus.OCCURRING_LOCAL_MOVE.value
+                return  # Sai do método sem montar move_to_send
+
+        print(f"Acabando a jogada")
+        # Se não há mais capturas, monta o move_to_send normalmente
         self._maybe_promote(destination)
         if self._evaluate_end_condition():
             self.game_status = GameStatus.FINISHED.value
 
-        captured_pieces_data = []
-        for piece in self.captured_pieces_on_this_turn:
-            if piece.position:
-                captured_pieces_data.append({
-                    "row": 7 - piece.position.row,
-                    "col": 7 - piece.position.col
-                })
+        # Monta captured_pieces_data
+        captured_pieces_data = [
+            {"row": 7 - captured["row"], "col": 7 - captured["col"]}
+            for captured in self.captured_pieces_on_this_turn
+            ]
 
+        # Prepara dicionário final
         winner = self.winner
-        game_status = self.game_status # mandamos para o send_move do dog, mas nem usaremos
-
+        game_status = self.game_status
         self.move_to_send = {
             "origin": origin_to_send,
             "destination": destination_to_send,
             "captured_pieces": captured_pieces_data,
             "winner": winner,
             "game_status": game_status,
-            "match_status": 'next', # 'next', 'progress' ou 'finished'
+            "match_status": 'next',
         }
 
-        self.game_status = GameStatus.WAITING_REMOTE_MOVE.value # Waiting remote move
+        # Turno agora é do adversário
+        self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
 
     def _maybe_promote(self, pos: Position) -> None:
         """Avalia se a peça deve ser promovida, e promove se necessário"""
@@ -210,7 +240,7 @@ class Board:
         d_row = destination.row - origin.row
         d_col = destination.col - origin.col
 
-        # Só é captura (já avaliado no self.get_possible_moves) se houve salto
+        # Só é captura (já avaliado no get_possible_moves) se houve salto
         if abs(d_row) == 2 or abs(d_col) == 2:
             mid_row = origin.row + (d_row // 2)
             mid_col = origin.col + (d_col // 2)
@@ -219,6 +249,9 @@ class Board:
             captured_piece = mid_position.piece
 
             if captured_piece:
+                # Antes de remover, salve row/col da peça capturada
+                self.add_captured_piece_on_this_turn(mid_row, mid_col)
+
                 captured_piece.toggle_is_captured()
                 mid_position.piece = None
                 captured_piece.position = None

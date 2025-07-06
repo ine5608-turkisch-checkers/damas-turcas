@@ -262,7 +262,8 @@ class PlayerInterface(DogPlayerInterface):
             print(f"Peça na posição ({row}, {col}):", piece_at_clicked)
 
             self.clear_selection_highlight() # Retira marcações de tiles
-            self.board.selected_origin = position_at_clicked  # Guarda origem no modelo
+            self.board.first_selected_origin = position_at_clicked # Guarda origem no modelo
+            self.board.current_selected_origin = position_at_clicked # Guarda origem no modelo
             self.hightlight_selected_tile(row, col) # Marca tile escolhido
 
             all_coords = [(row, col) for row in range(BOARD_SIZE) for col in range(BOARD_SIZE)]
@@ -271,11 +272,10 @@ class PlayerInterface(DogPlayerInterface):
 
             self.update_gui(game_status) ########################################################Talvez não precisa
 
-        elif game_status == 4: # Ocurring local move
-            origin = self.board.selected_origin
+        elif game_status == 4: # Occurring local move
+            origin = self.board.current_selected_origin
 
             possible_moves = self.board.get_possible_moves(origin)  # Positions válidas
-            #possible_coords = [(pos.row, pos.col) for pos in possible_moves] # Tuplas válidas
             if position_at_clicked not in possible_moves:
                 messagebox.showinfo("Error", "Movimento inválido")
                 return
@@ -290,8 +290,8 @@ class PlayerInterface(DogPlayerInterface):
             self.clear_all_tile_binds()
 
             if self.board.game_status == 4:
-                self.board.selected_origin = destination
-                self.hightlight_selected_tile(destination.row, destination.col) # Marca tile escolhido
+                self.board.current_selected_origin = destination
+                self.hightlight_selected_tile(destination.row, destination.col)
             if self.board.game_status == 5:
                 self.send_move()
                 self.board.switch_turn()
@@ -305,28 +305,34 @@ class PlayerInterface(DogPlayerInterface):
 
         move_to_send = self.board.move_to_send
         self.dog_server_interface.send_move(move_to_send)
-
         print(f"Dicionário enviado: {move_to_send}")
 
-        self.selected_origin = None #Reseta posição da peça que se moveu
-        self._captured_pieces_on_this_turn = [] #Reseta peças que foram capturadas
-        self.captured_pieces = []
-    
+        # Reset da jogada
+        self.board.first_selected_origin = None
+        self.board.current_selected_origin = None
+        self.board.move_to_send = None
+        self.board.clear_captured_pieces_on_this_turn()
+
+
     def receive_move(self, a_move):
         print("Entrou no receive mode da interface")
+        
         self.board.receive_move(a_move)
+
+        # ATUALIZA GUI antes de qualquer bind
+        game_status = self.board.game_status
+        self.update_gui(game_status)  # ← Isso redesenha tudo, inclusive pieces_id_by_position
+
+        # Verifica peças que podem capturar
         mandatory_pieces = self.board.check_mandatory_capture_pieces()
         if not mandatory_pieces:
-            # Nenhuma captura obrigatória, permite qualquer peça que pode se mover
             clickable_positions = self.board.get_moveable_pieces()
             clickable_coords = [(p.position.row, p.position.col) for p in clickable_positions if p.position]
         else:
-            # Capturas obrigatórias: permite somente elas
-            # Interface pode notificar: "Você deve capturar"
             clickable_coords = [(p.position.row, p.position.col) for p in mandatory_pieces if p.position]
+            messagebox.showinfo("Atenção", "Você deve capturar uma peça.")
+
         self.enable_clickable_positions(clickable_coords)
-        game_status = self.board.game_status
-        self.update_gui(game_status)
 
     def hightlight_selected_tile(self, row, col):
         tile_id = self.all_positions[row][col]["rect_id"]
