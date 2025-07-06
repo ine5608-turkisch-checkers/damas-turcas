@@ -182,23 +182,27 @@ class Board:
         origin_to_send = {"row": first_origin.row, "col": first_origin.col}
         destination_to_send = {"row": destination.row, "col": destination.col}
 
-        # Movimento local
-        current_origin.detach_piece()
-        destination.piece = piece
-        piece.position = destination
-
         # Verifica se há captura e registra se necessário
-        captured_coords = self.maybe_capture(current_origin, destination)
+        captured_coords = self.maybe_capture(piece, current_origin, destination)
         if captured_coords is not None:
             print(f"Achou uma peça para se capturar.")
             print(f"Lista de peças capturadas: {self.captured_pieces_on_this_turn}")
 
-            # Se ainda há múltiplas capturas, NÃO cria move_to_send ainda
+            # Move a peça fisicamente antes de verificar múltiplas capturas
+            current_origin.detach_piece()
+            destination.piece = piece
+            piece.position = destination
+            self.current_selected_origin = destination
+
             if self.verify_multiple_capture():
                 print("verify_multiple_capture deu True. Player deve capturar outra peça")
-                self.current_selected_origin = destination
                 self.game_status = GameStatus.OCCURRING_LOCAL_MOVE.value
-                return  # ← sai do método sem montar move_to_send
+                return
+
+        # Movimento local (sem captura ou fim da sequência de capturas)
+        current_origin.detach_piece()
+        destination.piece = piece
+        piece.position = destination
 
         # Se não há mais capturas, monta move_to_send
         self._maybe_promote(destination)
@@ -233,13 +237,18 @@ class Board:
         if pos.row == 0:
             piece.promote_piece()
     
-    def maybe_capture(self, origin: Position, destination: Position) -> Optional[Piece]:
-        """Se a jogada foi uma captura (movimento de 2 casas), remove a peça inimiga intermediária e retorna ela."""
+    def maybe_capture(self, piece: Piece, origin: Position, destination: Position) -> Optional[Piece]:
+        if piece.is_king:
+            return self.capture_as_king(origin, destination)
+        else:
+            return self.capture_as_man(origin, destination)
+
+    def capture_as_man(self, origin: Position, destination: Position) -> Optional[Piece]:
+        """Determina se há uma captura como peão, e executa a remoção da peça capturada"""
 
         d_row = destination.row - origin.row
         d_col = destination.col - origin.col
 
-        # Só é captura (já avaliado no get_possible_moves) se houve salto
         if abs(d_row) == 2 or abs(d_col) == 2:
             mid_row = origin.row + (d_row // 2)
             mid_col = origin.col + (d_col // 2)
@@ -248,15 +257,54 @@ class Board:
             captured_piece = mid_position.piece
 
             if captured_piece:
-                # Antes de remover, salve row/col da peça capturada
                 self.add_captured_piece_on_this_turn(mid_row, mid_col)
-
                 captured_piece.toggle_is_captured()
                 mid_position.piece = None
                 captured_piece.position = None
                 return captured_piece
 
         return None
+
+    def capture_as_king(self, origin: Position, destination: Position) -> Optional[Piece]:
+        """Determina se há uma captura como dama, e executa a remoção da peça capturada"""
+
+        d_row = destination.row - origin.row
+        d_col = destination.col - origin.col
+
+        # Verifica se o movimento é em linha reta (horizontal ou vertical)
+        if d_row != 0 and d_col != 0 and d_row != d_col and d_row != -d_col:
+            return None
+
+        step_row = (d_row // abs(d_row)) if d_row != 0 else 0
+        step_col = (d_col // abs(d_col)) if d_col != 0 else 0
+
+        r = origin.row + step_row
+        c = origin.col + step_col
+        captured_piece = None
+
+        while (r != destination.row or c != destination.col):
+            current_pos = self._positions[r][c]
+
+            if current_pos.is_occupied:
+                if captured_piece is not None:
+                    return None  # já encontrou uma peça antes — não pode capturar duas
+                if current_pos.piece in self.player1.pieces:
+                    return None  # não pode capturar suas próprias peças
+                captured_piece = current_pos.piece
+                captured_row = r
+                captured_col = c
+
+            r += step_row
+            c += step_col
+
+        if captured_piece:
+            self.add_captured_piece_on_this_turn(captured_row, captured_col)
+            captured_piece.toggle_is_captured()
+            self._positions[captured_row][captured_col].piece = None
+            captured_piece.position = None
+            return captured_piece
+
+        return None    
 
     # Felipe: Check winning condition apenas abrange vitória por inexistência de peças
     # não capturadas por parte de um dos jogadores
@@ -496,30 +544,25 @@ class Board:
         return moves
 
     def verify_multiple_capture(self) -> bool:
-        """Verifica se alguma peça do jogador local deve realizar uma captura."""
+        """Verifica se a peça que acabou de capturar pode capturar novamente."""
 
-        print(f"Entrou no verify multiple capture")
+        current = self.current_selected_origin
+        if current is None or current.piece is None or current.piece.is_captured:
+            return False
 
-        for piece in self.player1.pieces:  # Só o jogador local
-            if piece.is_captured or piece.position is None:
-                print("1o print")
-                continue
-
-            if piece.is_king:
-                if self.verify_capture_as_king(piece):
-                    print("2o print")
-                    return True
-            else:
-                if self.verify_capture_as_man(piece):
-                    print("3o print")
-                    return True
-
-        return False
+        piece = current.piece
+        if piece.is_king:
+            return self.verify_capture_as_king(piece)
+        else:
+            return self.verify_capture_as_man(piece)
     
     def verify_capture_as_man(self, piece: Piece) -> bool:
         pos = piece.position
         row, col = pos.row, pos.col
-        directions = [(-1, 0), (0, -1), (0, 1)]  # Frente, esquerda, direita para o jogador 1
+        directions = [(-1, 0), (0, -1), (0, 1)]  # Frente, esquerda, direita
+
+        player = self._player1 if piece in self._player1.pieces else self._player2
+        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
 
         for d_row, d_col in directions:
             mid_row = row + d_row
@@ -536,7 +579,7 @@ class Board:
 
                 if (
                     mid_pos.is_occupied and
-                    mid_pos.piece in self.player2.pieces and
+                    mid_pos.piece in enemy_pieces and
                     not dest_pos.is_occupied
                 ):
                     return True
@@ -548,18 +591,21 @@ class Board:
         row, col = pos.row, pos.col
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Cima, baixo, esquerda, direita
 
+        player = self._player1 if piece in self._player1.pieces else self._player2
+        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
+
         for d_row, d_col in directions:
             r, c = row + d_row, col + d_col
             found_enemy = False
 
-            while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE: #Um loop dentro das posições do board
+            while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE:
                 current_pos = self._positions[r][c]
 
                 if current_pos.is_occupied:
-                    if current_pos.piece in self.player1.pieces:
+                    if current_pos.piece in player.pieces:
                         break  # Não pode capturar suas próprias peças
                     elif found_enemy:
-                        break  # Já havia um inimigo, não pode ter dois
+                        break  # Já encontrou um inimigo antes — não pode capturar dois
                     else:
                         found_enemy = True
                 else:

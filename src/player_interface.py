@@ -138,7 +138,6 @@ class PlayerInterface(DogPlayerInterface):
         self.clear_pieces() #Retira todas peças antes de recolocá-las. Forma mais segura.
 
         all_pieces_back = self.board.get_all_pieces()
-        linha = 0
         all_pieces = []
         for owner, pieces in all_pieces_back.items():
             all_pieces.append([])
@@ -161,7 +160,6 @@ class PlayerInterface(DogPlayerInterface):
                     # Notificação na tela de mensagem sobre o status do jogo
                     if self.message_notification is not None:
                         self.message_notification.config(text=self.board.message_game_status())
-            linha += 1
 
     def reset_board(self):
         """Retira todas peças do tabuleiro"""
@@ -285,18 +283,25 @@ class PlayerInterface(DogPlayerInterface):
                 return
 
             destination = position_at_clicked
-            self.board.move_piece(origin, destination) #Move a peça para posição selecionada
+            self.board.move_piece(origin, destination)
             self.clear_selection_highlight()
             self.clear_all_tile_binds()
 
-            if self.board.game_status == 4:
+            updated_status = self.board.game_status
+
+            if updated_status == 4:  # Ainda há captura obrigatória
                 self.board.current_selected_origin = destination
                 self.hightlight_selected_tile(destination.row, destination.col)
-            if self.board.game_status == 5:
+                # Reativa apenas destinos válidos da peça atual
+                possible_moves = self.board.get_possible_moves(destination)
+                clickable_coords = [(pos.row, pos.col) for pos in possible_moves]
+                self.enable_clickable_positions(clickable_coords)
+
+            elif updated_status == 5:  # Jogada acabou, envia para o adversário
                 self.send_move()
                 self.board.switch_turn()
-            
-            self.update_gui(game_status)
+
+            self.update_gui(updated_status)
 
     def send_move(self):
         """Envia um dicionário ao dogActor com todas as informações da jogada"""
