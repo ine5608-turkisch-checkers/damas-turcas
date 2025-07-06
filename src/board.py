@@ -300,21 +300,28 @@ class Board:
                 return f"Seu adversário está jogando."
             case 6:
                 return f"Partida abandonada."
-
     def get_possible_moves(self, origin: Position) -> List[Position]:
-        """Retorna as posições de destino possíveis para uma dada peça, considerando capturas."""
+        """Retorna as posições de destino possíveis para uma dada peça, considerando capturas e tipo (peão ou dama)."""
         print("Entrou no board.get_possible_moves")
 
         piece = origin.piece
         if not piece:
             return []
 
+        if piece.is_king:
+            return self.get_possible_moves_as_king(origin)
+        else:
+            return self.get_possible_moves_as_man(origin)
+
+    def get_possible_moves_as_man(self, origin: Position) -> List[Position]:
+        """Retorna as posições de destino possíveis para uma dado peão"""
+        piece = origin.piece
         player = self._player1 if piece in self._player1.pieces else self._player2
         enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
 
         moves = []
-
         directions = [(-1, 0), (0, -1), (0, 1)]  # frente, esquerda, direita
+
         for dr, dc in directions:
             r1 = origin.row + dr
             c1 = origin.col + dc
@@ -323,18 +330,52 @@ class Board:
                 mid_pos = self._positions[r1][c1]
 
                 if not mid_pos.is_occupied:
-                    # Movimento simples
                     moves.append(mid_pos)
+                elif mid_pos.piece in enemy_pieces:
+                    r2 = r1 + dr
+                    c2 = c1 + dc
+                    if 0 <= r2 < BOARD_SIZE and 0 <= c2 < BOARD_SIZE:
+                        landing_pos = self._positions[r2][c2]
+                        if not landing_pos.is_occupied:
+                            moves.append(landing_pos)
+
+        return moves
+    
+    def get_possible_moves_as_king(self, origin: Position) -> List[Position]:
+        """Retorna as posições de destino possíveis para uma dada dama"""
+
+        piece = origin.piece
+        player = self._player1 if piece in self._player1.pieces else self._player2
+        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
+
+        moves = []
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # cima, baixo, esquerda, direita
+
+        for dr, dc in directions:
+            r, c = origin.row + dr, origin.col + dc
+            found_enemy = False
+
+            while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE:
+                current_pos = self._positions[r][c]
+
+                if current_pos.is_occupied:
+                    if current_pos.piece in player.pieces:
+                        break  # bloqueado por peça própria
+                    elif found_enemy:
+                        break  # não pode capturar duas seguidas
+                    else:
+                        found_enemy = True
                 else:
-                    # Verificar se é inimigo
-                    if mid_pos.piece in enemy_pieces:
-                        # Verificar a casa atrás da peça inimiga
-                        r2 = r1 + dr
-                        c2 = c1 + dc
-                        if 0 <= r2 < BOARD_SIZE and 0 <= c2 < BOARD_SIZE:
-                            landing_pos = self._positions[r2][c2]
-                            if not landing_pos.is_occupied:
-                                moves.append(landing_pos)
+                    if found_enemy:
+                        # Casa vazia após peça inimiga: captura
+                        moves.append(current_pos)
+                        break  # só pode capturar uma por vez
+                    else:
+                        # Movimento simples
+                        moves.append(current_pos)
+
+                r += dr
+                c += dc
 
         return moves
     
