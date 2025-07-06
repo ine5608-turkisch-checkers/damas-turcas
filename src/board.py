@@ -159,6 +159,8 @@ class Board:
 
         print("Definir reset game de acordo com o diagrama")
 
+
+
         return
 
     def detach_piece_at(self, pos: Position) -> None:
@@ -306,8 +308,6 @@ class Board:
 
         return None    
 
-    # Felipe: Check winning condition apenas abrange vitória por inexistência de peças
-    # não capturadas por parte de um dos jogadores
     def _evaluate_end_condition(self) -> None:
         """Checa condições de vitória do jogo"""
 

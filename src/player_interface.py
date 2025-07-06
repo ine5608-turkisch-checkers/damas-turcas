@@ -125,7 +125,7 @@ class PlayerInterface(DogPlayerInterface):
                     "col": col,
                     "obj_piece_back": None
                 })
-    
+
     def clear_pieces(self):
         for canvas_id in self.pieces_id_by_position.values():
             self.canvas.delete(canvas_id)
@@ -154,7 +154,11 @@ class PlayerInterface(DogPlayerInterface):
                     x2 = x1 + TILE_SIZE - 20
                     y2 = y1 + TILE_SIZE - 20
 
-                    piece_canva = self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
+                    piece_tag = f"piece_r{row}c{col}"
+
+                    # Círculo da peça base ####### novidade #######
+                    self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags=(piece_tag)) # Agora a tag é diferente
+
                     if piece.is_king:
                         print("Entrou no piece is king")
                         margin = TILE_SIZE // 4
@@ -162,9 +166,11 @@ class PlayerInterface(DogPlayerInterface):
                         inner_y1 = y1 + margin
                         inner_x2 = x2 - margin
                         inner_y2 = y2 - margin
-                        self.canvas.create_oval(inner_x1, inner_y1, inner_x2, inner_y2, fill="white", tags="piece")
+                        self.canvas.create_oval(inner_x1, inner_y1, inner_x2, inner_y2, fill="white", tags=(piece_tag))
+                    
+                    ################################################
 
-                    self.pieces_id_by_position[(row, col)] = piece_canva
+                    self.pieces_id_by_position[(row, col)] = piece_tag
 
                     # Notificação na tela de mensagem sobre o status do jogo
                     if self.message_notification is not None:
