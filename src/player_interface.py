@@ -155,6 +155,15 @@ class PlayerInterface(DogPlayerInterface):
                     y2 = y1 + TILE_SIZE - 20
 
                     piece_canva = self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags="piece")
+                    if piece.is_king:
+                        print("Entrou no piece is king")
+                        margin = TILE_SIZE // 4
+                        inner_x1 = x1 + margin
+                        inner_y1 = y1 + margin
+                        inner_x2 = x2 - margin
+                        inner_y2 = y2 - margin
+                        self.canvas.create_oval(inner_x1, inner_y1, inner_x2, inner_y2, fill="white", tags="piece")
+
                     self.pieces_id_by_position[(row, col)] = piece_canva
 
                     # Notificação na tela de mensagem sobre o status do jogo
