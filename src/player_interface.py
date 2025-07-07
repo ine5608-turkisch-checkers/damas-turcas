@@ -9,6 +9,7 @@ from dog.dog_actor import DogActor
 from board import Board
 
 import json
+from time import sleep
 
 BOARD_SIZE = 8
 TILE_SIZE = 80
@@ -327,6 +328,11 @@ class PlayerInterface(DogPlayerInterface):
                 possible_moves = self.board.get_possible_moves(destination)
                 clickable_coords = [(pos.row, pos.col) for pos in possible_moves]
                 self.enable_clickable_positions(clickable_coords)
+            
+            elif updated_status == 2:
+                self.send_move()
+                #sleep(5) # Espera 5 segundos
+                #self.restore_initial_state()
 
             elif updated_status == 5:  # Jogada acabou, envia para o adversário
                 self.send_move()
@@ -340,28 +346,6 @@ class PlayerInterface(DogPlayerInterface):
         print("Entrou no send move")
 
         move_to_send = self.board.move_to_send
-
-        print("----- [SEND MOVE DEBUG] -----")
-        origin_row = move_to_send["origin"]["row"]
-        origin_col = move_to_send["origin"]["col"]
-        dest_row = move_to_send["destination"]["row"]
-        dest_col = move_to_send["destination"]["col"]
-
-        origin_pos = self.board.positions[origin_row][origin_col]
-        dest_pos = self.board.positions[dest_row][dest_col]
-
-        origin_piece = origin_pos.piece
-        dest_piece = dest_pos.piece
-
-        all_pieces = self.board.get_all_pieces()
-        owner_origin = 'player1' if origin_piece in all_pieces['player1'] else 'player2' if origin_piece in all_pieces['player2'] else 'None'
-        owner_dest = 'player1' if dest_piece in all_pieces['player1'] else 'player2' if dest_piece in all_pieces['player2'] else 'None'
-
-        print(f"Peça na ORIGEM ({origin_row}, {origin_col}): {origin_piece} (Owner: {owner_origin})")
-        print(f"Peça no DESTINO ({dest_row}, {dest_col}): {dest_piece} (Owner: {owner_dest})")
-
-        print("--------------------------------")
-
         self.dog_server_interface.send_move(move_to_send)
         print(f"Dicionário enviado: {move_to_send}")
 
@@ -370,7 +354,6 @@ class PlayerInterface(DogPlayerInterface):
         self.board.current_selected_origin = None
         self.board.move_to_send = None
         self.board.clear_captured_pieces_on_this_turn()
-
 
     def receive_move(self, a_move):
         print("Entrou no receive mode da interface")
@@ -381,16 +364,17 @@ class PlayerInterface(DogPlayerInterface):
         game_status = self.board.game_status
         self.update_gui(game_status)  # Isso redesenha tudo, inclusive pieces_id_by_position
 
-        # Verifica peças que podem capturar
-        mandatory_pieces = self.board.check_mandatory_capture_pieces()
-        if not mandatory_pieces:
-            clickable_positions = self.board.get_moveable_pieces()
-            clickable_coords = [(p.position.row, p.position.col) for p in clickable_positions if p.position]
-        else:
-            clickable_coords = [(p.position.row, p.position.col) for p in mandatory_pieces if p.position]
-            messagebox.showinfo("Atenção", "Você deve capturar uma peça.")
+        if self.board.game_status == 3 or self.board.game_status == 4:
+            # Verifica peças que podem capturar
+            mandatory_pieces = self.board.check_mandatory_capture_pieces()
+            if not mandatory_pieces:
+                clickable_positions = self.board.get_moveable_pieces()
+                clickable_coords = [(p.position.row, p.position.col) for p in clickable_positions if p.position]
+            else:
+                clickable_coords = [(p.position.row, p.position.col) for p in mandatory_pieces if p.position]
+                messagebox.showinfo("Atenção", "Você deve capturar uma peça.")
 
-        self.enable_clickable_positions(clickable_coords)
+            self.enable_clickable_positions(clickable_coords)
 
     def hightlight_selected_tile(self, row, col):
         tile_id = self.all_positions[row][col]["rect_id"]

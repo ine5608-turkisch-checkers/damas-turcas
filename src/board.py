@@ -197,6 +197,13 @@ class Board:
         # Promoção e verificação de fim de jogo
         was_promoted = self._maybe_promote(destination)
         game_finished = self._evaluate_end_condition()
+        print(f"game_finished {game_finished}")
+        if game_finished:
+            self.move_to_send = {
+                "winner": self.player1.name,
+                "match_status": 'finished'
+            }
+            return
 
         # Prepara dados para envio
         captured_pieces_data = [{"row": c["row"], "col": c["col"]} 
@@ -209,7 +216,7 @@ class Board:
             "promoted": was_promoted,
             "winner": self._winner.name if self._winner else None,
             "game_status": self.game_status,
-            "match_status": 'next' if not game_finished else 'finished'
+            "match_status": 'next'
         }
 
         if not game_finished:
@@ -359,6 +366,12 @@ class Board:
         # Armazena o movimento
         self._received_move = a_move
         print(f"dicionário no receive move {a_move}")
+
+        if a_move["match_status"] == "finished":
+            print("Entrou no finished")
+            self.winner = a_move["winner"]
+            self.game_status = GameStatus.FINISHED.value
+            return
         
         print("----- [RECEIVE MOVE DEBUG] -----")
         origin_row = 7 - a_move["origin"]["row"]
@@ -453,7 +466,7 @@ class Board:
                 if winner is None:
                     return f"Partida terminada sem vencedores."
                 else:
-                    return f"Partida terminada. {winner.name} venceu a partida."
+                    return f"Partida terminada. {winner if isinstance(winner, str) else winner.name} venceu a partida."
             case 3:
                 return f"Sua vez. Escolha uma peça."
             case 4:
