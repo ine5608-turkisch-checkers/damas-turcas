@@ -300,15 +300,11 @@ class Board:
     def _evaluate_end_condition(self) -> bool:
         """Checa condições de vitória do jogo"""
 
-        alive1 = any(not p.is_captured for p in self.player_pieces(self.player1))
-        alive2 = any(not p.is_captured for p in self.player_pieces(self.player2))
+        pieces1 = [p for p in self.player_pieces(self.player1) if not p.is_captured]
+        pieces2 = [p for p in self.player_pieces(self.player2) if not p.is_captured]
 
-        # Debug: imprime lista de is_captured de cada peça
-        captured_list_p1 = [p.is_captured for p in self.player_pieces(self.player1)]
-        captured_list_p2 = [p.is_captured for p in self.player_pieces(self.player2)]
-        print(f"Captured status Player 1: {captured_list_p1}")
-        print(f"Captured status Player 2: {captured_list_p2}")
-        ###############################################
+        alive1 = len(pieces1) > 0
+        alive2 = len(pieces2) > 0
 
         if not alive1:
             self._winner = self._player2
@@ -316,6 +312,18 @@ class Board:
             return True
         elif not alive2:
             self._winner = self._player1
+            self._game_status = GameStatus.FINISHED.value
+            return True
+
+        # Regra 1: player1 tem 1 dama, player2 tem 1 peão
+        if len(pieces1) == 1 and pieces1[0].is_king and len(pieces2) == 1 and not pieces2[0].is_king:
+            self._winner = self._player1
+            self._game_status = GameStatus.FINISHED.value
+            return True
+
+        # Regra 2: empate se ambos só têm 1 peão
+        if len(pieces1) == 1 and len(pieces2) == 1 and not pieces1[0].is_king and not pieces2[0].is_king:
+            self._winner = None
             self._game_status = GameStatus.FINISHED.value
             return True
 
@@ -558,7 +566,6 @@ class Board:
 
         piece = origin.piece
         player = self._player1 if piece in self._player1.pieces else self._player2
-        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
 
         moves = []
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # cima, baixo, esquerda, direita
@@ -599,7 +606,6 @@ class Board:
             return []
 
         player = self._player1 if piece in self._player1.pieces else self._player2
-        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
 
         moves = []
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # cima, baixo, esquerda, direita
@@ -679,7 +685,6 @@ class Board:
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Cima, baixo, esquerda, direita
 
         player = self._player1 if piece in self._player1.pieces else self._player2
-        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
 
         for d_row, d_col in directions:
             r, c = row + d_row, col + d_col
