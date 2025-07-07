@@ -26,7 +26,6 @@ class PlayerInterface(DogPlayerInterface):
         self.all_positions = []
         self.fill_main_window()  # Organiza a janela e cria os widgets
         self.board = Board()
-        #self.message_notification = None  # Variável para a mensagem de notificação
         self.all_pieces = []
         self.draw_board()  # Desenha o tabuleiro inicial
         self.associate_canva() # Coloca as peças no tabuleiro
@@ -83,7 +82,7 @@ class PlayerInterface(DogPlayerInterface):
         self.spacer = tk.Label(self.controls_frame, text="", bg=ROOT_BG_COLOR)
         self.spacer.grid(row=0, column=0, sticky="ew")
 
-        self.withdraw_button = tk.Button(self.controls_frame, text="Withdraw", command=self.reset_board, bg=ROOT_BG_COLOR, fg=ROOT_FONT_COLOR)
+        self.withdraw_button = tk.Button(self.controls_frame, text="Withdraw", command=self.restore_initial_state(), bg=ROOT_BG_COLOR, fg=ROOT_FONT_COLOR)
         self.withdraw_button.grid(row=0, column=1, padx=10, sticky="e")
 
         self.menubar = tk.Menu(self.main_window)
@@ -176,11 +175,13 @@ class PlayerInterface(DogPlayerInterface):
                     if self.message_notification is not None:
                         self.message_notification.config(text=self.board.message_game_status())
 
-    def reset_board(self):
+    def restore_initial_state(self):
         """Retira todas peças do tabuleiro"""
 
-        self.draw_board()
-        messagebox.showinfo("Reset", "Board has been reset.")
+        self.board = Board()
+        self.all_pieces = []
+        self.draw_board()  # Desenha o tabuleiro inicial
+        self.associate_canva() # Coloca as peças no tabuleiro
     
     def receive_move(self, a_move) -> None:
         self.board.receive_move(a_move)
@@ -245,7 +246,7 @@ class PlayerInterface(DogPlayerInterface):
         match_status = self.board.game_status
         game_status = self.board.game_status
         if match_status == 2 or match_status == 6:
-            self.board.reset_game()  # Definir o que acontece se FINISHED ou ABANDONED
+            self.restore_initial_state()  # Definir o que acontece se FINISHED ou ABANDONED
         self.update_gui(match_status)
 
     def make_move(self, row: int, col: int) -> None:
