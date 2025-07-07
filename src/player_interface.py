@@ -96,6 +96,7 @@ class PlayerInterface(DogPlayerInterface):
 
         self.associate_canva()
         if self.board.game_status == 2:
+            messagebox.showinfo("Jogo terminado", self.board.message_game_status())
             self.restore_initial_state()
 
     def draw_board(self):
