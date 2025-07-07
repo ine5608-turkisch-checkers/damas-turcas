@@ -169,71 +169,53 @@ class Board:
         self._positions[pos.row][pos.col].detach_piece()
 
     def move_piece(self, current_origin: Position, destination: Position) -> None:
-        """Move peça de uma posição de origem à uma posição de destino.
-        Promove se necessário e checa condição de término de jogo."""
-
-        print("Entrou em move_piece")
-        print(f"origin: {current_origin} e current_origin.row e col ({current_origin.row}, {current_origin.col})")
-        print(f"destination: {destination} e destination.row e col ({destination.row}, {destination.col})")
-
         piece = self.piece_at(current_origin)
         if piece is None:
             raise ValueError("Sem peça na origem.")
 
+        # Guarda origens para envio
         first_origin = self.first_selected_origin
         origin_to_send = {"row": first_origin.row, "col": first_origin.col}
         destination_to_send = {"row": destination.row, "col": destination.col}
 
-        # Movimento local (sem captura ou fim da sequência de capturas)
+        # Move a peça primeiro
         current_origin.detach_piece()
         destination.piece = piece
         piece.position = destination
 
-        # Verifica se há captura e registra se necessário
+        # Verifica captura
         captured_coords = self.maybe_capture(piece, current_origin, destination)
-        if captured_coords is not None:
-            print(f"Achou uma peça para se capturar.")
-            print(f"Lista de peças capturadas: {self.captured_pieces_on_this_turn}")
+        has_capture = captured_coords is not None
 
-            # Move a peça fisicamente antes de verificar múltiplas capturas
-            current_origin.detach_piece()
-            destination.piece = piece
-            piece.position = destination
+        # Se houve captura, verifica se pode capturar novamente
+        if has_capture:
             self.current_selected_origin = destination
-
             if self.verify_multiple_capture():
-                print("verify_multiple_capture deu True. Player deve capturar outra peça")
                 self.game_status = GameStatus.OCCURRING_LOCAL_MOVE.value
-                return
+                return  # Aguarda próxima captura
 
-        # Se não há mais capturas, monta move_to_send
+        # Promoção e verificação de fim de jogo
         was_promoted = self._maybe_promote(destination)
-        if self._evaluate_end_condition():
-            self.game_status = GameStatus.FINISHED.value
+        game_finished = self._evaluate_end_condition()
 
-        # Monta captured_pieces_data
-        captured_pieces_data = []
-        for coords in self.captured_pieces_on_this_turn:
-            captured_pieces_data.append({
-                "row": coords["row"],
-                "col": coords["col"]
-            })
+        # Prepara dados para envio
+        captured_pieces_data = [{"row": c["row"], "col": c["col"]} 
+                            for c in self.captured_pieces_on_this_turn]
 
-        winner_name = self._winner.name if self._winner else None
-        print(f"winner no move_piece: {winner_name}")
-        game_status = self.game_status
         self.move_to_send = {
             "origin": origin_to_send,
             "destination": destination_to_send,
             "captured_pieces": captured_pieces_data,
             "promoted": was_promoted,
-            "winner": winner_name,
-            "game_status": game_status,
-            "match_status": 'next',
+            "winner": self._winner.name if self._winner else None,
+            "game_status": self.game_status,
+            "match_status": 'next' if not game_finished else 'finished'
         }
-        print(f"dicionário no move piece {self.move_to_send}")
-        if self.game_status != GameStatus.FINISHED.value:
+
+        if not game_finished:
             self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
+        else:
+            self.game_status = GameStatus.FINISHED.value
 
     def _maybe_promote(self, pos: Position) -> bool:
         """Avalia se a peça deve ser promovida, e promove se necessário"""
@@ -251,25 +233,20 @@ class Board:
             return self.capture_as_man(origin, destination)
 
     def capture_as_man(self, origin: Position, destination: Position) -> Optional[Piece]:
-        """Determina se há uma captura como peão, e executa a remoção da peça capturada"""
-
         d_row = destination.row - origin.row
         d_col = destination.col - origin.col
 
         if abs(d_row) == 2 or abs(d_col) == 2:
             mid_row = origin.row + (d_row // 2)
             mid_col = origin.col + (d_col // 2)
-
             mid_position = self._positions[mid_row][mid_col]
             captured_piece = mid_position.piece
 
             if captured_piece:
                 self.add_captured_piece_on_this_turn(mid_row, mid_col)
                 captured_piece.toggle_is_captured()
-                mid_position.piece = None
-                captured_piece.position = None
+                mid_position.detach_piece()  # Usar detach_piece em vez de atribuir None
                 return captured_piece
-
         return None
 
     def capture_as_king(self, origin: Position, destination: Position) -> Optional[Piece]:
@@ -311,7 +288,7 @@ class Board:
             captured_piece.position = None
             return captured_piece
 
-        return None    
+        return None
 
     def _evaluate_end_condition(self) -> bool:
         """Checa condições de vitória do jogo"""
@@ -327,7 +304,7 @@ class Board:
             self._winner = self._player1
             self._game_status = GameStatus.FINISHED.value
             return True
-        
+
         return False
 
     def start_match(self, players: str, local_player_id: str) -> bool:
@@ -409,12 +386,11 @@ class Board:
 
         # Remove peças capturadas do adversário
         for captured in a_move["captured_pieces"]:
-            row, col = 7- captured["row"], 7 - captured["col"]
+            row, col = 7 - captured["row"], 7 - captured["col"]
             pos = self._positions[row][col]
             if pos.piece:
                 pos.piece.toggle_is_captured()
-                pos.piece.position = None  # ← remove o vínculo na própria peça
-                pos.piece = None           # ← remove o vínculo na posição
+                pos.detach_piece()  # Limpa a posição
 
         # Move a peça
         origin_data = a_move["origin"]
@@ -481,16 +457,22 @@ class Board:
             case 6:
                 return f"Partida abandonada."
     def get_possible_moves(self, origin: Position) -> List[Position]:
-        """Retorna as posições de destino possíveis para uma dada peça, considerando capturas e tipo (peão ou dama)."""
+        """Retorna as posições de destino possíveis para uma dada peça, priorizando capturas obrigatórias."""
 
         piece = origin.piece
         if not piece:
             return []
 
         if piece.is_king:
-            return self.get_possible_moves_as_king(origin)
+            if self.verify_capture_as_king(piece):
+                return self.get_capture_moves_as_king(origin)
+            else:
+                return self.get_possible_moves_as_king(origin)
         else:
-            return self.get_possible_moves_as_man(origin)
+            if self.verify_capture_as_man(piece):
+                return self.get_capture_moves_as_man(origin)
+            else:
+                return self.get_possible_moves_as_man(origin)
 
     def get_possible_moves_as_man(self, origin: Position) -> List[Position]:
         """Retorna as posições de destino possíveis para uma dado peão"""
@@ -517,6 +499,38 @@ class Board:
                         landing_pos = self._positions[r2][c2]
                         if not landing_pos.is_occupied:
                             moves.append(landing_pos)
+
+        return moves
+
+    def get_capture_moves_as_man(self, origin: Position) -> List[Position]:
+        """Retorna apenas as posições de captura possíveis para um peão."""
+        piece = origin.piece
+        if not piece:
+            return []
+
+        player = self._player1 if piece in self._player1.pieces else self._player2
+        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
+
+        moves = []
+        directions = [(-1, 0), (0, -1), (0, 1)]  # frente, esquerda, direita
+
+        for dr, dc in directions:
+            r1, c1 = origin.row + dr, origin.col + dc
+            r2, c2 = origin.row + 2*dr, origin.col + 2*dc
+
+            if (
+                0 <= r1 < BOARD_SIZE and 0 <= c1 < BOARD_SIZE and
+                0 <= r2 < BOARD_SIZE and 0 <= c2 < BOARD_SIZE
+            ):
+                mid_pos = self._positions[r1][c1]
+                dest_pos = self._positions[r2][c2]
+
+                if (
+                    mid_pos.is_occupied and
+                    mid_pos.piece in enemy_pieces and
+                    not dest_pos.is_occupied
+                ):
+                    moves.append(dest_pos)
 
         return moves
 
@@ -553,6 +567,45 @@ class Board:
                         # Movimento simples
                         moves.append(current_pos)
 
+                r += dr
+                c += dc
+
+        return moves
+    
+    def get_capture_moves_as_king(self, origin: Position) -> List[Position]:
+        """Retorna apenas as posições de captura possíveis para uma dama."""
+
+        piece = origin.piece
+        if not piece:
+            return []
+
+        player = self._player1 if piece in self._player1.pieces else self._player2
+        enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
+
+        moves = []
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # cima, baixo, esquerda, direita
+
+        for dr, dc in directions:
+            r, c = origin.row + dr, origin.col + dc
+            found_enemy = False
+            enemy_row, enemy_col = -1, -1
+
+            while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE:
+                current_pos = self._positions[r][c]
+
+                if current_pos.is_occupied:
+                    if current_pos.piece in player.pieces:
+                        break  # bloqueado por peça própria
+                    elif found_enemy:
+                        break  # não pode capturar duas seguidas
+                    else:
+                        found_enemy = True
+                        enemy_row, enemy_col = r, c
+                else:
+                    if found_enemy:
+                        # Encontrou inimigo e casa vazia depois: pode capturar
+                        moves.append(current_pos)
+                        break  # só pode capturar uma vez por direção
                 r += dr
                 c += dc
 

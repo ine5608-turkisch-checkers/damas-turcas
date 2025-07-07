@@ -276,6 +276,11 @@ class PlayerInterface(DogPlayerInterface):
             if mandatory_pieces and piece_at_clicked not in mandatory_pieces:
                 messagebox.showinfo("Atenção", "Você deve capturar uma peça.")
                 return
+            elif not mandatory_pieces:
+                moveable_pieces = self.board.get_moveable_pieces()
+                if piece_at_clicked not in moveable_pieces:
+                    messagebox.showinfo("Atenção", "Essa peça não pode se mover.")
+                    return
 
             print(f"Peça na posição ({row}, {col}):", piece_at_clicked)
 
