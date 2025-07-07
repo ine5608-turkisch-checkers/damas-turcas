@@ -156,10 +156,7 @@ class Board:
 
     def reset_game(self):
         """Reseta tudo do jogo"""
-
-        print("Definir reset game de acordo com o diagrama")
-
-
+        ...
 
         return
 
@@ -197,7 +194,6 @@ class Board:
         # Promoção e verificação de fim de jogo
         was_promoted = self._maybe_promote(destination)
         game_finished = self._evaluate_end_condition()
-        print(f"game_finished {game_finished}")
         if game_finished:
             self.move_to_send = {
                 "winner": self.player1.name,
@@ -234,12 +230,16 @@ class Board:
         return False
 
     def maybe_capture(self, piece: Piece, origin: Position, destination: Position) -> Optional[Piece]:
+        """Determina se há uma captura para dada peça"""
+
         if piece.is_king:
             return self.capture_as_king(origin, destination)
         else:
             return self.capture_as_man(origin, destination)
 
     def capture_as_man(self, origin: Position, destination: Position) -> Optional[Piece]:
+        """Determina se há uma captura como peão, e executa a remoção da peça capturada"""
+
         d_row = destination.row - origin.row
         d_col = destination.col - origin.col
 
@@ -278,7 +278,7 @@ class Board:
 
             if current_pos.is_occupied:
                 if captured_piece is not None:
-                    return None  # já encontrou uma peça antes — não pode capturar duas
+                    return None  # já encontrou uma peça antes, não pode capturar duas
                 if current_pos.piece in self.player1.pieces:
                     return None  # não pode capturar suas próprias peças
                 captured_piece = current_pos.piece
@@ -306,6 +306,7 @@ class Board:
         alive1 = len(pieces1) > 0
         alive2 = len(pieces2) > 0
 
+        # Regra 1: player1 tem 1 dama, player2 tem 1 peão
         if not alive1:
             self._winner = self._player2
             self._game_status = GameStatus.FINISHED.value
@@ -315,13 +316,13 @@ class Board:
             self._game_status = GameStatus.FINISHED.value
             return True
 
-        # Regra 1: player1 tem 1 dama, player2 tem 1 peão
+        # Regra 2: player1 tem 1 dama, player2 tem 1 peão
         if len(pieces1) == 1 and pieces1[0].is_king and len(pieces2) == 1 and not pieces2[0].is_king:
             self._winner = self._player1
             self._game_status = GameStatus.FINISHED.value
             return True
 
-        # Regra 2: empate se ambos só têm 1 peão
+        # Regra 3: empate se ambos só têm 1 peão
         if len(pieces1) == 1 and len(pieces2) == 1 and not pieces1[0].is_king and not pieces2[0].is_king:
             self._winner = None
             self._game_status = GameStatus.FINISHED.value
@@ -330,11 +331,8 @@ class Board:
         return False
 
     def start_match(self, players: str, local_player_id: str) -> bool:
-        """
-        Atualiza os atributos dos jogadores existentes com os dados da Dog API.
-        Define quem começa e retorna True se for o jogador local, False caso contrário.
-        """
-        print("Entrou no board.start match")
+        """Atualiza os atributos dos jogadores existentes com os dados da Dog API.
+        Define quem começa e retorna True se for o jogador local, False caso contrário."""
 
         player1_name = players[0][0]
         player1_id = players[0][1]
@@ -354,54 +352,17 @@ class Board:
         else:
             self.player2.toggle_turn()
             self.game_status = GameStatus.WAITING_REMOTE_MOVE.value
-
-        ## Para desenvolvimento ###########
-        if self.is_local_player:
-            print("Este é o jogador 1")
-        else:
-            print("Este é o jogador 2")
-        print(f"player1_id: {self.player1.id}")
-        print(f"player2_id: {self.player2.id}")
-
-        ###################################
     
     def receive_move(self, a_move: dict) -> None:
         """Recebe a jogada do adversário e atualiza o tabuleiro."""
 
-        print("Entrou no receive_move")
-        print(f"a_move no receive move: {a_move}")
-
         # Armazena o movimento
         self._received_move = a_move
-        print(f"dicionário no receive move {a_move}")
 
         if a_move["match_status"] == "finished":
-            print("Entrou no finished")
             self.winner = a_move["winner"]
             self.game_status = GameStatus.FINISHED.value
             return
-        
-        print("----- [RECEIVE MOVE DEBUG] -----")
-        origin_row = 7 - a_move["origin"]["row"]
-        origin_col = 7 -a_move["origin"]["col"]
-        dest_row = 7 - a_move["destination"]["row"]
-        dest_col = 7 - a_move["destination"]["col"]
-
-        origin_pos = self.positions[origin_row][origin_col]
-        dest_pos = self.positions[dest_row][dest_col]
-
-        origin_piece = origin_pos.piece
-        dest_piece = dest_pos.piece
-
-        all_pieces = self.get_all_pieces()
-        owner_origin = 'player1' if origin_piece in all_pieces['player1'] else 'player2' if origin_piece in all_pieces['player2'] else 'None'
-        owner_dest = 'player1' if dest_piece in all_pieces['player1'] else 'player2' if dest_piece in all_pieces['player2'] else 'None'
-
-        print(f"Origem recebida: ({origin_row}, {origin_col}) -> Peça: {origin_piece} (Owner: {owner_origin})")
-        print(f"Destino recebido: ({dest_row}, {dest_col}) -> Peça: {dest_piece} (Owner: {owner_dest})")
-
-        print("--------------------------------")
-
 
         # Verifica vitória
         if a_move["winner"] is not None:
@@ -422,24 +383,18 @@ class Board:
 
         # Move a peça
         origin_data = a_move["origin"]
-        print(f"origin_data: {origin_data}")
         dest_data = a_move["destination"]
         origin = self._positions[7 - origin_data["row"]][7 -origin_data["col"]]
-        print(f"origin: {origin}")
-        print(f"origin row e col: {origin.row} e {origin.col}")
-        print(f"origem recebida no receive move {origin}")
         destination = self._positions[7 - dest_data["row"]][7 - dest_data["col"]]
 
         piece = origin.piece
-        print(f"piece recebida no receive move {piece}")
         origin.detach_piece()
         destination.piece = piece
-        print(f"piece 2 recebida no receive move {piece}")
         piece.position = destination
         if a_move.get("promoted"):
             piece.promote_piece()
 
-        # 6. Atualiza status e muda o turno de ambos jogadores
+        # Atualiza status e muda o turno de ambos jogadores
         self._game_status = GameStatus.WAITING_LOCAL_MOVE.value
         self.switch_turn()
     
@@ -503,6 +458,7 @@ class Board:
 
     def get_possible_moves_as_man(self, origin: Position) -> List[Position]:
         """Retorna as posições de destino possíveis para uma dado peão"""
+
         piece = origin.piece
         player = self._player1 if piece in self._player1.pieces else self._player2
         enemy_pieces = self._player2.pieces if player == self._player1 else self._player1.pieces
@@ -531,6 +487,7 @@ class Board:
 
     def get_capture_moves_as_man(self, origin: Position) -> List[Position]:
         """Retorna apenas as posições de captura possíveis para um peão."""
+
         piece = origin.piece
         if not piece:
             return []
@@ -578,10 +535,8 @@ class Board:
                 current_pos = self._positions[r][c]
 
                 if current_pos.is_occupied:
-                    if current_pos.piece in player.pieces:
-                        break  # bloqueado por peça própria
-                    elif found_enemy:
-                        break  # não pode capturar duas seguidas
+                    if (current_pos.piece in player.pieces) or found_enemy:
+                        break
                     else:
                         found_enemy = True
                 else:
@@ -613,24 +568,20 @@ class Board:
         for dr, dc in directions:
             r, c = origin.row + dr, origin.col + dc
             found_enemy = False
-            enemy_row, enemy_col = -1, -1
 
             while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE:
                 current_pos = self._positions[r][c]
 
                 if current_pos.is_occupied:
-                    if current_pos.piece in player.pieces:
-                        break  # bloqueado por peça própria
-                    elif found_enemy:
-                        break  # não pode capturar duas seguidas
+                    if (current_pos.piece in player.pieces) or found_enemy:
+                        break
                     else:
                         found_enemy = True
-                        enemy_row, enemy_col = r, c
                 else:
                     if found_enemy:
                         # Encontrou inimigo e casa vazia depois: pode capturar
                         moves.append(current_pos)
-                        break  # só pode capturar uma vez por direção
+                        break
                 r += dr
                 c += dc
 
@@ -694,10 +645,8 @@ class Board:
                 current_pos = self._positions[r][c]
 
                 if current_pos.is_occupied:
-                    if current_pos.piece in player.pieces:
+                    if (current_pos.piece in player.pieces) or found_enemy:
                         break  # Não pode capturar suas próprias peças
-                    elif found_enemy:
-                        break  # Já encontrou um inimigo antes — não pode capturar dois
                     else:
                         found_enemy = True
                 else:

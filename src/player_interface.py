@@ -2,14 +2,11 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import simpledialog
 from tkinter.messagebox import showinfo
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 
 from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
 from board import Board
-
-import json
-from time import sleep
 
 BOARD_SIZE = 8
 TILE_SIZE = 80
@@ -18,7 +15,6 @@ ROOT_FONT_COLOR = "#F2F2F2"
 HIGHLIGHT_COLOR = "#EEDD82"
 LIGHT_TILE_COLOR = "#C8AD7F"
 DARK_TILE_COLOR = "#5C3A21"
-#self.canvas.tag_bind(rect_id, "<Button-1>", lambda event, rid=rect_id: self.on_tile_click(event, rid))
 
 class PlayerInterface(DogPlayerInterface):
     def __init__(self):
@@ -94,9 +90,7 @@ class PlayerInterface(DogPlayerInterface):
         self.menu_file = tk.Menu(self.menubar)
         self.menubar.add_cascade(menu=self.menu_file, label="File")
 
-        # Adicionar itens de menu a cada menu adicionado à barra de menu:
         self.menu_file.add_command(label="Iniciar jogo", command=self.start_match)
-        #self.menu_file.add_command(label="Restaurar estado inicial", command=self.start_game)
 
     def update_gui(self, game_status):
         """Atualiza interface com as peças e estados do jogo"""
@@ -157,11 +151,11 @@ class PlayerInterface(DogPlayerInterface):
 
                     piece_tag = f"piece_r{row}c{col}"
 
-                    # Círculo da peça base ####### novidade #######
+                    # Círculo das peças damas
+                    # ####### novidade #######
                     self.canvas.create_oval(x1, y1, x2, y2, fill=fill_color, tags=(piece_tag)) # Agora a tag é diferente
 
                     if piece.is_king:
-                        print("Entrou no piece is king")
                         margin = TILE_SIZE // 4
                         inner_x1 = x1 + margin
                         inner_y1 = y1 + margin
@@ -184,18 +178,14 @@ class PlayerInterface(DogPlayerInterface):
         messagebox.showinfo("Reset", "Board has been reset.")
 
     def restore_initial_state(self):
+
         self.board = Board()
         self.all_pieces = []
         self.draw_board()  # Desenha o tabuleiro inicial
         self.associate_canva() # Coloca as peças no tabuleiro
-    
-    def receive_move(self, a_move) -> None:
-        self.board.receive_move(a_move)
-        game_status = self.board.game_status
-        self.update_gui(game_status)
 
     def start_match(self) -> None:
-        print("Entrou no start match")
+        """Inicia start match"""
 
         match_status = self.board.game_status
         if match_status == 1:
@@ -209,7 +199,6 @@ class PlayerInterface(DogPlayerInterface):
                 else:
                     players = start_status.get_players()
                     local_player_id = start_status.get_local_id()
-                    print(f"local_player_id: {local_player_id}")
 
                     self.board.start_match(players, local_player_id)
                     game_state = self.board.game_status
@@ -224,30 +213,26 @@ class PlayerInterface(DogPlayerInterface):
                     clickable_positions = [(5, col) for col in range(8)] #3a Linha de baixo para cima 
                     self.enable_clickable_positions(clickable_positions)
 
-        print(f"game_status: {game_state}")
-
     def receive_start(self, start_status) -> None:
-        print("Entrou no receive start")
+        """Recebe start match"""
 
         self.start_game()
         players = start_status.get_players()
         local_player_id = start_status.get_local_id()
         self.board.start_match(players, local_player_id)
-        print(f"local_player_id: {local_player_id}")
 
         game_state = self.board.game_status
 
         self.player1_label.config(text=f"Player 1: {self.board.player1.name}")
         self.player2_label.config(text=f"Player 2: {self.board.player2.name}")
 
-        print(game_state)
         self.update_gui(game_state)
 
         clickable_pieces = [(5, col) for col in range(8)] #3a Linha de baixo para cima 
         self.enable_clickable_positions(clickable_pieces)
 
     def start_game(self) -> None:
-        print("Entrou no start game")
+        """Inicia o jogo"""
 
         match_status = self.board.game_status
         game_status = self.board.game_status
@@ -257,7 +242,6 @@ class PlayerInterface(DogPlayerInterface):
 
     def make_move(self, row: int, col: int) -> None:
         """Fazer a jogada. Ação quando se clica em uma peça habilitada"""
-        print(f"Entrou no make_move()")
 
         game_status = self.board.game_status
 
@@ -271,12 +255,10 @@ class PlayerInterface(DogPlayerInterface):
             piece_at_clicked = position_at_clicked.piece
 
             if piece_at_clicked is None:
-                print(f"Não existe peça nessa posição. Posição: ({row},{col})")
                 return
 
             local_pieces = self.board.player1.pieces
             if piece_at_clicked not in local_pieces:
-                print("Essa peça não é sua")
                 return
             
             mandatory_pieces = self.board.check_mandatory_capture_pieces()
@@ -288,8 +270,6 @@ class PlayerInterface(DogPlayerInterface):
                 if piece_at_clicked not in moveable_pieces:
                     messagebox.showinfo("Atenção", "Essa peça não pode se mover.")
                     return
-
-            print(f"Peça na posição ({row}, {col}):", piece_at_clicked)
 
             self.clear_selection_highlight() # Retira marcações de tiles
             self.board.first_selected_origin = position_at_clicked # Guarda origem no modelo
@@ -311,7 +291,6 @@ class PlayerInterface(DogPlayerInterface):
                 return
 
             if not origin:
-                print("Nenhuma peça selecionada.")
                 return
 
             destination = position_at_clicked
@@ -324,6 +303,7 @@ class PlayerInterface(DogPlayerInterface):
             if updated_status == 4:  # Ainda há captura obrigatória
                 self.board.current_selected_origin = destination
                 self.hightlight_selected_tile(destination.row, destination.col)
+                
                 # Reativa apenas destinos válidos da peça atual
                 possible_moves = self.board.get_possible_moves(destination)
                 clickable_coords = [(pos.row, pos.col) for pos in possible_moves]
@@ -343,11 +323,8 @@ class PlayerInterface(DogPlayerInterface):
     def send_move(self):
         """Envia um dicionário ao dogActor com todas as informações da jogada"""
 
-        print("Entrou no send move")
-
         move_to_send = self.board.move_to_send
         self.dog_server_interface.send_move(move_to_send)
-        print(f"Dicionário enviado: {move_to_send}")
 
         # Reset da jogada
         self.board.first_selected_origin = None
@@ -356,8 +333,8 @@ class PlayerInterface(DogPlayerInterface):
         self.board.clear_captured_pieces_on_this_turn()
 
     def receive_move(self, a_move):
-        print("Entrou no receive mode da interface")
-        
+        """Recebe a jogada do DogActor"""
+
         self.board.receive_move(a_move)
 
         # ATUALIZA GUI antes de qualquer bind
@@ -405,14 +382,8 @@ class PlayerInterface(DogPlayerInterface):
             if piece_id is not None:
                 self.canvas.tag_bind(piece_id, "<Button-1>", lambda event, r=row, c=col: self.make_move(r, c))
 
-        print(f"Tiles habilitados: {clickable_positions}\n")
 
     def clear_all_tile_binds(self) -> None:
         """Remove todos os event bindings (<Button-1>) de todos os tiles do tabuleiro."""
 
         self.canvas.tag_unbind("piece", "<Button-1>")
-
-        #for row in range(BOARD_SIZE):
-        #    for col in range(BOARD_SIZE):
-        #        tile_id = self.all_positions[row][col]["rect_id"]
-        #        self.canvas.tag_unbind(tile_id, "<Button-1>")
