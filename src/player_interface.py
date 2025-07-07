@@ -8,6 +8,8 @@ from dog.dog_interface import DogPlayerInterface
 from dog.dog_actor import DogActor
 from board import Board
 
+import time
+
 BOARD_SIZE = 8
 TILE_SIZE = 80
 ROOT_BG_COLOR = "#3B4A59"
@@ -96,6 +98,8 @@ class PlayerInterface(DogPlayerInterface):
         """Atualiza interface com as peças e estados do jogo"""
 
         self.associate_canva()
+        if self.board.game_status == 2:
+            self.restore_initial_state()
 
     def draw_board(self):
         """Desenha o tabuleiro sem peça nenhuma"""
@@ -175,7 +179,7 @@ class PlayerInterface(DogPlayerInterface):
         """Retira todas peças do tabuleiro"""
         
         self.draw_board()
-        messagebox.showinfo("Reset", "Board has been reset.")
+        messagebox.showinfo("Reset", "O tabuleiro foi resetado.")
 
     def restore_initial_state(self):
 
@@ -183,6 +187,7 @@ class PlayerInterface(DogPlayerInterface):
         self.all_pieces = []
         self.draw_board()  # Desenha o tabuleiro inicial
         self.associate_canva() # Coloca as peças no tabuleiro
+        messagebox.showinfo("Reset", "O tabuleiro foi resetado.")
 
     def start_match(self) -> None:
         """Inicia start match"""
@@ -311,7 +316,7 @@ class PlayerInterface(DogPlayerInterface):
             
             elif updated_status == 2:
                 self.send_move()
-                #sleep(5) # Espera 5 segundos
+                #time.sleep(5) # Espera 5 segundos
                 #self.restore_initial_state()
 
             elif updated_status == 5:  # Jogada acabou, envia para o adversário
