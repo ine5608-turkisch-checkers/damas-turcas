@@ -15,7 +15,7 @@ class Board:
         self._positions: List[List[Position]] = [
             [Position(row, col) for col in range(BOARD_SIZE)]
             for row in range(BOARD_SIZE)
-        ] # pode ser usado com o self._positions[2][3] ex
+        ]
 
         self._game_status: int = GameStatus.NO_MATCH.value
         self._winner: Optional[str] = None
@@ -296,6 +296,13 @@ class Board:
         alive1 = any(not p.is_captured for p in self.player_pieces(self.player1))
         alive2 = any(not p.is_captured for p in self.player_pieces(self.player2))
 
+        # Debug: imprime lista de is_captured de cada peça
+        captured_list_p1 = [p.is_captured for p in self.player_pieces(self.player1)]
+        captured_list_p2 = [p.is_captured for p in self.player_pieces(self.player2)]
+        print(f"Captured status Player 1: {captured_list_p1}")
+        print(f"Captured status Player 2: {captured_list_p2}")
+        ###############################################
+
         if not alive1:
             self._winner = self._player2
             self._game_status = GameStatus.FINISHED.value
@@ -416,23 +423,22 @@ class Board:
         self.switch_turn()
     
     def check_mandatory_capture_pieces(self) -> List[Piece]:
-        """Retorna todas as peças do jogador local (player1) que podem capturar."""
+            """Retorna todas as peças do jogador local (player1) que podem capturar."""
 
-        mandatory_pieces = []
+            mandatory_pieces = []
 
-        for piece in self.player1.pieces:
-            if piece.is_captured or piece.position is None:
-                continue
+            for piece in self.player1.pieces:
+                if piece.is_captured or piece.position is None:
+                    continue
 
-            if piece.is_king:
-                if self.verify_capture_as_king(piece):
-                    mandatory_pieces.append(piece)
-            else:
-                if self.verify_capture_as_man(piece):
-                    mandatory_pieces.append(piece)
+                elif piece.is_king:
+                    if self.verify_capture_as_king(piece):
+                        mandatory_pieces.append(piece)
+                else:
+                    if self.verify_capture_as_man(piece):
+                        mandatory_pieces.append(piece)
 
-        return mandatory_pieces
-        
+            return mandatory_pieces
 
     def message_game_status(self) -> str:
         """Retorna mensagem referente ao estado do jogo"""
