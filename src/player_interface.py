@@ -82,9 +82,6 @@ class PlayerInterface(DogPlayerInterface):
         self.spacer = tk.Label(self.controls_frame, text="", bg=ROOT_BG_COLOR)
         self.spacer.grid(row=0, column=0, sticky="ew")
 
-        self.withdraw_button = tk.Button(self.controls_frame, text="Withdraw", command=self.reset_board, bg=ROOT_BG_COLOR, fg=ROOT_FONT_COLOR)
-        self.withdraw_button.grid(row=0, column=1, padx=10, sticky="e")
-
         self.menubar = tk.Menu(self.main_window)
         self.menubar.option_add("*tearOff", False)
         self.main_window["menu"] = self.menubar
@@ -244,6 +241,9 @@ class PlayerInterface(DogPlayerInterface):
         if match_status == 2 or match_status == 6:
             self.board.reset_game()  # Definir o que acontece se FINISHED ou ABANDONED
         self.update_gui(match_status)
+
+    def receive_withdrawal_notification(self):
+        self.restore_initial_state()
 
     def make_move(self, row: int, col: int) -> None:
         """Fazer a jogada. Ação quando se clica em uma peça habilitada"""
